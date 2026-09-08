@@ -16,6 +16,11 @@ public interface CycloneObservationRepository
 
     List<CycloneObservation> findByCycloneIdOrderByObservedAtDesc(UUID cycloneId);
 
+    Optional<CycloneObservation> findByCycloneIdAndSourceRecordId(
+            UUID cycloneId,
+            String sourceRecordId
+    );
+
     Optional<CycloneObservation> findFirstByCycloneIdOrderByObservedAtDesc(
             UUID cycloneId
     );

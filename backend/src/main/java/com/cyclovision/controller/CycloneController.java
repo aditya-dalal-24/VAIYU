@@ -1,40 +1,57 @@
 package com.cyclovision.controller;
 
-import com.cyclovision.entity.Cyclone;
-import com.cyclovision.entity.CycloneObservation;
+import com.cyclovision.dto.CycloneDetailResponse;
+import com.cyclovision.dto.CycloneObservationResponse;
+import com.cyclovision.dto.CycloneSummaryResponse;
 import com.cyclovision.service.CycloneService;
-import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
-@RequestMapping({"/api/v1/cyclones", "/api/cyclones"})
-@RequiredArgsConstructor
+@RequestMapping("/api/cyclones")
 public class CycloneController {
 
     private final CycloneService cycloneService;
 
+    public CycloneController(CycloneService cycloneService) {
+        this.cycloneService = cycloneService;
+    }
+
     @GetMapping
-    public ResponseEntity<List<Cyclone>> getAllCyclones() {
-        return ResponseEntity.ok(cycloneService.getActiveCyclones());
+    public ResponseEntity<List<CycloneSummaryResponse>> getAllCyclones(
+            @RequestParam(required = false) String status
+    ) {
+        return ResponseEntity.ok(
+                cycloneService.getAllCyclones(status)
+        );
     }
 
     @GetMapping("/active")
-    public ResponseEntity<List<Cyclone>> getActiveCyclones() {
-        return ResponseEntity.ok(cycloneService.getActiveCyclones());
+    public ResponseEntity<List<CycloneSummaryResponse>> getActiveCyclones() {
+        return ResponseEntity.ok(
+                cycloneService.getActiveCyclones()
+        );
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Cyclone> getCycloneById(@PathVariable String id) {
-        return cycloneService.getCycloneById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<CycloneDetailResponse> getCycloneById(
+            @PathVariable UUID id
+    ) {
+        return ResponseEntity.ok(
+                cycloneService.getCycloneById(id)
+        );
     }
 
     @GetMapping("/{id}/observations")
-    public ResponseEntity<List<CycloneObservation>> getObservations(@PathVariable String id) {
-        return ResponseEntity.ok(cycloneService.getCycloneObservations(id));
+    public ResponseEntity<List<CycloneObservationResponse>>
+    getCycloneObservations(@PathVariable UUID id) {
+
+        return ResponseEntity.ok(
+                cycloneService.getCycloneObservations(id)
+        );
     }
 }
