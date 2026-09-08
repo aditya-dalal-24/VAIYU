@@ -10,6 +10,11 @@ import java.util.UUID;
 
 @Repository
 public interface CycloneRepository extends JpaRepository<Cyclone, UUID> {
+
     List<Cyclone> findByStatus(String status);
-    Optional<Cyclone> findByExternalSourceAndExternalId(String externalSource, String externalId);
+
+    Optional<Cyclone> findByExternalSourceAndExternalId(
+            String externalSource,
+            String externalId
+    );
 }

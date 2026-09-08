@@ -1,7 +1,40 @@
 version: '3.8'
 
-# Docker services will be added later for frontend, backend, ai-service, and database.
 services:
-  # placeholder:
-  #   image: alpine
-  #   command: echo "Placeholder"
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: cyclovision-db
+    environment:
+      POSTGRES_DB: cyclovision
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: changeme
+    ports:
+      - "5432:5432"
+      
+  ai-service:
+    build: ./ai-service
+    container_name: cyclovision-ai
+    ports:
+      - "8000:8000"
+
+  backend:
+    build: ./backend
+    container_name: cyclovision-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cyclovision
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: changeme
+      AI_SERVICE_URL: http://ai-service:8000
+    depends_on:
+      - postgres
+      - ai-service
+
+  frontend:
+    build: ./frontend
+    container_name: cyclovision-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend

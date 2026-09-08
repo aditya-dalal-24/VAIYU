@@ -9,9 +9,19 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface CycloneObservationRepository extends JpaRepository<CycloneObservation, UUID> {
-    List<CycloneObservation> findByCycloneIdOrderByObservedAtDesc(UUID cycloneId);
+public interface CycloneObservationRepository
+        extends JpaRepository<CycloneObservation, UUID> {
+
     List<CycloneObservation> findByCycloneIdOrderByObservedAtAsc(UUID cycloneId);
-    Optional<CycloneObservation> findByCycloneIdAndSourceRecordId(UUID cycloneId, String sourceRecordId);
-    Optional<CycloneObservation> findFirstByCycloneIdOrderByObservedAtDesc(UUID cycloneId);
+
+    List<CycloneObservation> findByCycloneIdOrderByObservedAtDesc(UUID cycloneId);
+
+    Optional<CycloneObservation> findByCycloneIdAndSourceRecordId(
+            UUID cycloneId,
+            String sourceRecordId
+    );
+
+    Optional<CycloneObservation> findFirstByCycloneIdOrderByObservedAtDesc(
+            UUID cycloneId
+    );
 }
