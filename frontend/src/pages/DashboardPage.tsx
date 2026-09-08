@@ -105,7 +105,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             >
               {cyclones.map((c) => (
                 <option key={c.id} value={c.id} className="bg-[#0B1B2B] text-[#F5F8FA]">
-                  {c.name} — {c.basin} ({c.latestObservation?.windSpeedKmh || 165} km/h)
+                  {c.name} — {c.basin} ({c.latestObservation?.windSpeedKph || 165} km/h)
                 </option>
               ))}
             </select>
@@ -182,7 +182,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                       <div className="absolute -top-12 z-20 bg-white text-gray-900 text-[11px] font-bold py-1.5 px-3 rounded-xl shadow-2xl animate-bounce flex flex-col items-center pointer-events-none min-w-[90px]">
                         <span>July, 2026</span>
                         <div className="text-[10px] text-emerald-700 font-mono">
-                          <span>{latestObs?.windSpeedKmh || 165} km/h</span>
+                          <span>{latestObs?.windSpeedKph || 165} km/h</span>
                         </div>
                         <div className="absolute bottom-0 translate-y-1/2 w-2 h-2 bg-white rotate-45"></div>
                       </div>
@@ -245,7 +245,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             {/* Main Stat Number */}
             <div className="flex items-baseline gap-3 mb-6">
               <span className="text-4xl font-extrabold text-white font-mono tracking-tight">
-                {latestObs ? latestObs.windSpeedKmh : '165'} <span className="text-xl text-gray-400 font-sans">km/h</span>
+                {latestObs ? latestObs.windSpeedKph : '165'} <span className="text-xl text-gray-400 font-sans">km/h</span>
               </span>
               <span className="flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
                 <span>↗ 4.7%</span>
@@ -263,7 +263,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     ↗ 4.7%
                   </span>
                 </div>
-                <p className="text-[10px] text-emerald-400 font-mono">+{latestObs?.windSpeedKmh || 165} km/h peak</p>
+                <p className="text-[10px] text-emerald-400 font-mono">+{latestObs?.windSpeedKph || 165} km/h peak</p>
 
                 {/* Dot Matrix Pyramid Grid Graphic */}
                 <div className="pt-2 flex flex-col items-center gap-1">

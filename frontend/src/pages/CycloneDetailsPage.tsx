@@ -11,9 +11,9 @@ interface CycloneDetailsPageProps {
 export const CycloneDetailsPage: React.FC<CycloneDetailsPageProps> = ({ cyclone, observations }) => {
   const chartData = observations.map((obs) => ({
     time: new Date(obs.observedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit' }),
-    windSpeed: obs.windSpeedKmh,
+    windSpeed: obs.windSpeedKph,
     pressure: obs.pressureHpa,
-    category: obs.intensityCategory,
+    category: cyclone.currentCategory,
   }));
 
   const latest = cyclone.latestObservation;
@@ -26,7 +26,7 @@ export const CycloneDetailsPage: React.FC<CycloneDetailsPageProps> = ({ cyclone,
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-extrabold text-white">{cyclone.name}</h1>
             <span className="text-xs px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 font-bold border border-indigo-500/30">
-              {cyclone.basin} ({cyclone.seasonYear})
+              {cyclone.basin}
             </span>
           </div>
           <p className="text-xs text-gray-400 mt-1">Telemetry ID: {cyclone.id}</p>
@@ -35,7 +35,7 @@ export const CycloneDetailsPage: React.FC<CycloneDetailsPageProps> = ({ cyclone,
         <div className="flex items-center gap-6">
           <div className="text-right">
             <span className="text-xs text-gray-400 block">Intensity Category</span>
-            <span className="text-lg font-black text-amber-400">{latest?.intensityCategory || 'Very Severe'}</span>
+            <span className="text-lg font-black text-amber-400">{cyclone.currentCategory || 'Very Severe'}</span>
           </div>
           <div className="text-right border-l border-gray-800 pl-6">
             <span className="text-xs text-gray-400 block">Central Pressure</span>
@@ -43,7 +43,7 @@ export const CycloneDetailsPage: React.FC<CycloneDetailsPageProps> = ({ cyclone,
           </div>
           <div className="text-right border-l border-gray-800 pl-6">
             <span className="text-xs text-gray-400 block">Forward Movement</span>
-            <span className="text-lg font-black font-mono text-indigo-300">{latest?.movementSpeedKmh || 14} km/h</span>
+            <span className="text-lg font-black font-mono text-indigo-300">{latest?.movementSpeedKph || 14} km/h</span>
           </div>
         </div>
       </div>
@@ -57,7 +57,7 @@ export const CycloneDetailsPage: React.FC<CycloneDetailsPageProps> = ({ cyclone,
               <Wind className="w-5 h-5 text-amber-400" />
               <h3 className="font-bold text-white text-sm">Sustained Wind Speed Trend (km/h)</h3>
             </div>
-            <span className="text-xs text-amber-400 font-mono font-bold">Peak: {latest?.windSpeedKmh} km/h</span>
+            <span className="text-xs text-amber-400 font-mono font-bold">Peak: {latest?.windSpeedKph} km/h</span>
           </div>
 
           <div className="h-64 w-full pt-2">
@@ -134,12 +134,12 @@ export const CycloneDetailsPage: React.FC<CycloneDetailsPageProps> = ({ cyclone,
                   <td className="px-4 py-3 font-semibold text-white">
                     {new Date(obs.observedAt).toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-indigo-300">{obs.lat}°N, {obs.long}°E</td>
-                  <td className="px-4 py-3 text-amber-400 font-bold">{obs.windSpeedKmh} km/h</td>
+                  <td className="px-4 py-3 text-indigo-300">{obs.latitude}°N, {obs.longitude}°E</td>
+                  <td className="px-4 py-3 text-amber-400 font-bold">{obs.windSpeedKph} km/h</td>
                   <td className="px-4 py-3 text-purple-300">{obs.pressureHpa} hPa</td>
                   <td className="px-4 py-3">
                     <span className="px-2 py-0.5 rounded bg-gray-800 text-gray-300 border border-gray-700">
-                      {obs.intensityCategory}
+                      {cyclone.currentCategory}
                     </span>
                   </td>
                 </tr>
@@ -151,3 +151,4 @@ export const CycloneDetailsPage: React.FC<CycloneDetailsPageProps> = ({ cyclone,
     </div>
   );
 };
+

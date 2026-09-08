@@ -92,7 +92,7 @@ export const PredictionsPage: React.FC<PredictionsPageProps> = ({ cyclone, predi
               {(prediction?.trajectory || []).map((pt, idx) => (
                 <tr key={idx} className="hover:bg-gray-800/40 transition-all">
                   <td className="px-4 py-3 font-bold text-purple-300">+{pt.forecastHour} Hours</td>
-                  <td className="px-4 py-3 text-white font-semibold">{pt.lat}°N, {pt.long}°E</td>
+                  <td className="px-4 py-3 text-white font-semibold">{pt.lat}°N, {pt.longCoord}°E</td>
                   <td className="px-4 py-3 text-amber-400">± {pt.confidenceRadiusKm} km</td>
                   <td className="px-4 py-3 text-gray-400">
                     {pt.forecastHour <= 12 ? 'Kalman State Extrapolator' : 'XGBoost Spatiotemporal Net'}

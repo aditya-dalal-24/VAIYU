@@ -10,8 +10,8 @@ interface Globe3DProps {
 }
 
 interface Particle3D {
-  lat: number;
-  lon: number;
+  latitude: number;
+  longitude: number;
   age: number;
   maxAge: number;
   speed: number;
@@ -35,8 +35,8 @@ export const Globe3DVisualizer: React.FC<Globe3DProps> = ({
 
   // Target coordinates for camera interpolation
   const latestObs = cyclone.latestObservation;
-  const cycloneLat = latestObs ? latestObs.lat : 19.4;
-  const cycloneLon = latestObs ? latestObs.long : 67.8;
+  const cycloneLat = latestObs ? latestObs.latitude : 19.4;
+  const cycloneLon = latestObs ? latestObs.longitude : 67.8;
 
   // Camera rotation state (in radians)
   const rotationRef = useRef({ rotX: 0.25, rotY: -1.2 });
@@ -77,8 +77,8 @@ export const Globe3DVisualizer: React.FC<Globe3DProps> = ({
       particles.length = 0;
       for (let i = 0; i < particleDensity; i++) {
         particles.push({
-          lat: (Math.random() - 0.5) * 160,
-          lon: (Math.random() - 0.5) * 360,
+          latitude: (Math.random() - 0.5) * 160,
+          longitude: (Math.random() - 0.5) * 360,
           age: Math.floor(Math.random() * 50),
           maxAge: 40 + Math.random() * 60,
           speed: 0.8 + Math.random() * 1.5,
@@ -122,10 +122,10 @@ export const Globe3DVisualizer: React.FC<Globe3DProps> = ({
     };
 
     // 3D Spherical Orthographic Projection Engine
-    const project3D = (lat: number, lon: number, radius: number, cx: number, cy: number) => {
+    const project3D = (latitude: number, longitude: number, radius: number, cx: number, cy: number) => {
       const { rotX, rotY } = rotationRef.current;
-      const phi = lat * (Math.PI / 180);
-      const lambda = lon * (Math.PI / 180);
+      const phi = latitude * (Math.PI / 180);
+      const lambda = longitude * (Math.PI / 180);
 
       // Spherical coordinates
       const x0 = Math.cos(phi) * Math.sin(lambda);
@@ -150,17 +150,17 @@ export const Globe3DVisualizer: React.FC<Globe3DProps> = ({
     };
 
     // 2D Equirectangular Planar Projection
-    const project2D = (lat: number, lon: number, width: number, height: number) => {
-      const px = ((lon + 180) / 360) * width;
-      const py = ((90 - lat) / 180) * height;
+    const project2D = (latitude: number, longitude: number, width: number, height: number) => {
+      const px = ((longitude + 180) / 360) * width;
+      const py = ((90 - latitude) / 180) * height;
       return { x: px, y: py, z: 1, visible: true };
     };
 
-    const project = (lat: number, lon: number, radius: number, cx: number, cy: number) => {
+    const project = (latitude: number, longitude: number, radius: number, cx: number, cy: number) => {
       if (projectionMode === '3d') {
-        return project3D(lat, lon, radius, cx, cy);
+        return project3D(latitude, longitude, radius, cx, cy);
       } else {
-        return project2D(lat, lon, canvas.width, canvas.height);
+        return project2D(latitude, longitude, canvas.width, canvas.height);
       }
     };
 
@@ -248,12 +248,12 @@ export const Globe3DVisualizer: React.FC<Globe3DProps> = ({
       // Render 3D Spherical Wind Vector Particles
       if (showWind) {
         particles.forEach((p, idx) => {
-          const dLat = cycloneLat - p.lat;
-          const dLon = cycloneLon - p.lon;
+          const dLat = cycloneLat - p.latitude;
+          const dLon = cycloneLon - p.longitude;
           const dist = Math.sqrt(dLat * dLat + dLon * dLon) + 0.01;
 
           // Trade Winds + Northern Hemisphere Cyclone Swirl
-          let vLat = 0.05 * Math.sin((p.lon * Math.PI) / 180);
+          let vLat = 0.05 * Math.sin((p.longitude * Math.PI) / 180);
           let vLon = 0.25;
 
           if (dist < 38) {
@@ -262,10 +262,10 @@ export const Globe3DVisualizer: React.FC<Globe3DProps> = ({
             vLon = (dLat * 0.16 + dLon * 0.06) * intensity;
           }
 
-          const nextLat = p.lat + vLat * p.speed;
-          const nextLon = p.lon + vLon * p.speed;
+          const nextLat = p.latitude + vLat * p.speed;
+          const nextLon = p.longitude + vLon * p.speed;
 
-          const p1 = project(p.lat, p.lon, sphereRadius, cx, cy);
+          const p1 = project(p.latitude, p.longitude, sphereRadius, cx, cy);
           const p2 = project(nextLat, nextLon, sphereRadius, cx, cy);
 
           if (p1.visible && p2.visible) {
@@ -279,14 +279,14 @@ export const Globe3DVisualizer: React.FC<Globe3DProps> = ({
             ctx.stroke();
           }
 
-          p.lat = nextLat;
-          p.lon = nextLon;
+          p.latitude = nextLat;
+          p.longitude = nextLon;
           p.age++;
 
-          if (p.age > p.maxAge || p.lat > 85 || p.lat < -85 || p.lon > 180 || p.lon < -180) {
+          if (p.age > p.maxAge || p.latitude > 85 || p.latitude < -85 || p.longitude > 180 || p.longitude < -180) {
             particles[idx] = {
-              lat: (Math.random() - 0.5) * 160,
-              lon: (Math.random() - 0.5) * 360,
+              latitude: (Math.random() - 0.5) * 160,
+              longitude: (Math.random() - 0.5) * 360,
               age: 0,
               maxAge: 40 + Math.random() * 60,
               speed: 0.8 + Math.random() * 1.5,
@@ -303,9 +303,9 @@ export const Globe3DVisualizer: React.FC<Globe3DProps> = ({
         ctx.beginPath();
 
         let started = false;
-        const pts = [{ lat: cycloneLat, lon: cycloneLon }, ...prediction.trajectory.map(t => ({ lat: t.lat, lon: t.long }))];
+        const pts = [{ latitude: cycloneLat, longitude: cycloneLon }, ...prediction.trajectory.map(t => ({ latitude: t.lat, longitude: t.longCoord }))];
         pts.forEach(pt => {
-          const projected = project(pt.lat, pt.lon, sphereRadius, cx, cy);
+          const projected = project(pt.latitude, pt.longitude, sphereRadius, cx, cy);
           if (projected.visible) {
             if (!started) { ctx.moveTo(projected.x, projected.y); started = true; }
             else { ctx.lineTo(projected.x, projected.y); }
@@ -344,7 +344,7 @@ export const Globe3DVisualizer: React.FC<Globe3DProps> = ({
 
         ctx.fillStyle = '#F59E0B';
         ctx.font = '10px "Inter", sans-serif';
-        ctx.fillText(`${latestObs?.windSpeedKmh || 165} km/h | ${latestObs?.pressureHpa || 954} hPa`, centerProj.x + 14, centerProj.y + 2);
+        ctx.fillText(`${latestObs?.windSpeedKph || 165} km/h | ${latestObs?.pressureHpa || 954} hPa`, centerProj.x + 14, centerProj.y + 2);
       }
 
       animId = requestAnimationFrame(render);
@@ -519,3 +519,4 @@ export const Globe3DVisualizer: React.FC<Globe3DProps> = ({
     </div>
   );
 };
+

@@ -2,22 +2,25 @@ export interface CycloneObservation {
   id?: string;
   cycloneId?: string;
   observedAt: string;
-  lat: number;
-  long: number;
-  windSpeedKmh: number;
+  latitude: number;
+  longitude: number;
+  windSpeedKph: number;
   pressureHpa: number;
-  movementDirectionDeg?: number;
-  movementSpeedKmh?: number;
-  intensityCategory: string;
+  movementDirectionDegrees?: number;
+  movementSpeedKph?: number;
+  source?: string;
 }
 
 export interface Cyclone {
   id: string;
+  externalSource?: string;
+  externalId?: string;
   name: string;
   basin: string;
-  seasonYear: number;
-  status: 'ACTIVE' | 'DISSIPATED' | 'HISTORICAL';
+  status: string;
+  currentCategory?: string;
   createdAt?: string;
+  updatedAt?: string;
   latestObservation?: CycloneObservation;
   observations?: CycloneObservation[];
 }
@@ -27,7 +30,7 @@ export interface PredictedTrackPoint {
   predictionId?: string;
   forecastHour: number;
   lat: number;
-  long: number;
+  longCoord: number;
   confidenceRadiusKm: number;
 }
 

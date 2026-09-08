@@ -41,18 +41,18 @@ export const CycloneMap: React.FC<CycloneMapProps> = ({
   const [tileLayerType, setTileLayerType] = useState<'dark' | 'satellite'>('dark');
 
   const latestObs = cyclone.latestObservation;
-  const centerLat = latestObs ? latestObs.lat : 18.5;
-  const centerLong = latestObs ? latestObs.long : 67.5;
+  const centerLat = latestObs ? latestObs.latitude : 18.5;
+  const centerLong = latestObs ? latestObs.longitude : 67.5;
 
   // Extract historical track points
-  const historicalTrackPoints: [number, number][] = (cyclone.observations || []).map(obs => [obs.lat, obs.long]);
+  const historicalTrackPoints: [number, number][] = (cyclone.observations || []).map(obs => [obs.latitude, obs.longitude]);
 
   // Extract predicted trajectory points
-  const predictedTrackPoints: [number, number][] = (prediction?.trajectory || []).map(pt => [pt.lat, pt.long]);
+  const predictedTrackPoints: [number, number][] = (prediction?.trajectory || []).map(pt => [pt.lat, pt.longCoord]);
   
   // Combine latest position with predictions for continuous line
   const fullPredictedPolyline: [number, number][] = latestObs 
-    ? [[latestObs.lat, latestObs.long], ...predictedTrackPoints]
+    ? [[latestObs.latitude, latestObs.longitude], ...predictedTrackPoints]
     : predictedTrackPoints;
 
   // Build confidence corridor polygon coordinates around predicted points
@@ -63,12 +63,12 @@ export const CycloneMap: React.FC<CycloneMapProps> = ({
 
     prediction.trajectory.forEach(pt => {
       const radiusDeg = pt.confidenceRadiusKm / 111.0; // ~111km per lat degree
-      forwardPoints.push([pt.lat + radiusDeg * 0.7, pt.long + radiusDeg * 0.7]);
-      returnPoints.unshift([pt.lat - radiusDeg * 0.7, pt.long - radiusDeg * 0.7]);
+      forwardPoints.push([pt.lat + radiusDeg * 0.7, pt.longCoord + radiusDeg * 0.7]);
+      returnPoints.unshift([pt.lat - radiusDeg * 0.7, pt.longCoord - radiusDeg * 0.7]);
     });
 
     if (latestObs) {
-      confidencePolygonCoords.push([latestObs.lat, latestObs.long]);
+      confidencePolygonCoords.push([latestObs.latitude, latestObs.longitude]);
     }
     confidencePolygonCoords.push(...forwardPoints, ...returnPoints);
   }
@@ -138,7 +138,7 @@ export const CycloneMap: React.FC<CycloneMapProps> = ({
       <WindParticleCanvas
         centerLat={centerLat}
         centerLong={centerLong}
-        maxWindSpeedKmh={latestObs ? latestObs.windSpeedKmh : 150}
+        maxWindSpeedKph={latestObs ? latestObs.windSpeedKph : 150}
         isActive={showWindParticles}
       />
 
@@ -190,7 +190,7 @@ export const CycloneMap: React.FC<CycloneMapProps> = ({
         {/* Active Cyclone Marker */}
         {latestObs && (
           <Marker
-            position={[latestObs.lat, latestObs.long]}
+            position={[latestObs.latitude, latestObs.longitude]}
             icon={createCycloneIcon()}
           >
             <Popup>
@@ -198,17 +198,17 @@ export const CycloneMap: React.FC<CycloneMapProps> = ({
                 <div className="flex items-center justify-between border-b border-gray-700 pb-1">
                   <span className="font-bold text-sm text-indigo-400">{cyclone.name}</span>
                   <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded font-mono">
-                    {latestObs.intensityCategory}
+                    {cyclone.currentCategory}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs text-gray-300">
                   <div>
                     <span className="text-gray-400 block text-[10px]">Position</span>
-                    <span className="font-mono font-medium">{latestObs.lat}°N, {latestObs.long}°E</span>
+                    <span className="font-mono font-medium">{latestObs.latitude}°N, {latestObs.longitude}°E</span>
                   </div>
                   <div>
                     <span className="text-gray-400 block text-[10px]">Wind Speed</span>
-                    <span className="font-mono font-bold text-amber-400">{latestObs.windSpeedKmh} km/h</span>
+                    <span className="font-mono font-bold text-amber-400">{latestObs.windSpeedKph} km/h</span>
                   </div>
                   <div>
                     <span className="text-gray-400 block text-[10px]">Central Pressure</span>
@@ -216,7 +216,7 @@ export const CycloneMap: React.FC<CycloneMapProps> = ({
                   </div>
                   <div>
                     <span className="text-gray-400 block text-[10px]">Movement</span>
-                    <span className="font-mono">{latestObs.movementSpeedKmh || 14} km/h</span>
+                    <span className="font-mono">{latestObs.movementSpeedKph || 14} km/h</span>
                   </div>
                 </div>
               </div>
@@ -228,7 +228,7 @@ export const CycloneMap: React.FC<CycloneMapProps> = ({
         {showPrediction && prediction?.trajectory?.map((pt, idx) => (
           <Marker
             key={idx}
-            position={[pt.lat, pt.long]}
+            position={[pt.lat, pt.longCoord]}
             icon={L.divIcon({
               className: 'custom-forecast-marker',
               html: `<div class="w-3.5 h-3.5 bg-purple-500 rounded-full border-2 border-white shadow-md flex items-center justify-center text-[8px] font-bold text-white">+${pt.forecastHour}h</div>`,
@@ -239,7 +239,7 @@ export const CycloneMap: React.FC<CycloneMapProps> = ({
             <Popup>
               <div className="text-xs space-y-1">
                 <p className="font-bold text-purple-400">+{pt.forecastHour} Hours Forecast</p>
-                <p className="font-mono">Coordinates: {pt.lat}°N, {pt.long}°E</p>
+                <p className="font-mono">Coordinates: {pt.lat}°N, {pt.longCoord}°E</p>
                 <p className="text-gray-400">Confidence Radius: <span className="text-white font-bold">{pt.confidenceRadiusKm} km</span></p>
               </div>
             </Popup>
@@ -249,3 +249,9 @@ export const CycloneMap: React.FC<CycloneMapProps> = ({
     </div>
   );
 };
+
+
+
+
+
+

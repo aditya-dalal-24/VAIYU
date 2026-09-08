@@ -393,9 +393,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                         >
                           <div>
                             <span className="font-bold text-white block">{c.name}</span>
-                            <span className="text-[11px] text-gray-400">{c.basin} | Category: {c.latestObservation?.intensityCategory || 'Very Severe Cyclonic Storm'}</span>
+                            <span className="text-[11px] text-gray-400">{c.basin} | Category: {c.currentCategory || 'Very Severe Cyclonic Storm'}</span>
                           </div>
-                          <span className="font-mono text-emerald-400 font-bold">{c.latestObservation?.windSpeedKmh || 165} km/h</span>
+                          <span className="font-mono text-emerald-400 font-bold">{c.latestObservation?.windSpeedKph || 165} km/h</span>
                         </div>
                       ))}
                   </div>
@@ -416,4 +416,5 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
+
 
