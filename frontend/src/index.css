@@ -1,111 +1,153 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
-
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+  color-scheme: dark;
 }
 
 body {
   margin: 0;
+  padding: 0;
+  background-color: #0B1B2B;
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(63, 199, 234, 0.15) 0%, transparent 60%),
+    radial-gradient(circle at 85% 50%, rgba(30, 62, 88, 0.40) 0%, transparent 50%),
+    radial-gradient(circle at 15% 85%, rgba(19, 44, 66, 0.50) 0%, transparent 50%),
+    linear-gradient(180deg, #0B1B2B 0%, #08131F 100%);
+  color: #F5F8FA;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+  min-height: 100vh;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+/* Futuristic Cybernetic Background Grid Overlay */
+.futuristic-grid-bg {
+  background-image: 
+    linear-gradient(rgba(124, 147, 160, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124, 147, 160, 0.08) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: center center;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
+/* Radar Sweep Animation */
+@keyframes futuristic-radar {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
+.radar-sweep {
+  animation: futuristic-radar 8s linear infinite;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0B1B2B;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3A4E5A;
   border-radius: 4px;
-  color: var(--text-h);
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+::-webkit-scrollbar-thumb:hover {
+  background: #5A8AA3;
+}
+
+/* Solis Luxury Glass & Card Primitives (Style Guide #1E3E58 surface, #3A4E5A border) */
+.solis-card {
+  background: rgba(30, 62, 88, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid #3A4E5A;
+  border-radius: 28px;
+  box-shadow: 
+    0 20px 50px rgba(7, 17, 28, 0.8),
+    inset 0 1px 0 rgba(245, 248, 250, 0.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.solis-card:hover {
+  border-color: #3FC7EA;
+  background: rgba(44, 88, 114, 0.90);
+  box-shadow: 
+    0 25px 65px rgba(7, 17, 28, 0.95),
+    0 0 30px rgba(63, 199, 234, 0.2);
+}
+
+.solis-subcard {
+  background: rgba(19, 44, 66, 0.85);
+  border: 1px solid #3A4E5A;
+  border-radius: 20px;
+}
+
+.glass-panel {
+  background: rgba(30, 62, 88, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid #3A4E5A;
+  box-shadow: 0 16px 40px rgba(7, 17, 28, 0.7);
+}
+
+.solis-pill-active {
+  background: #3FC7EA;
+  color: #0B1B2B;
+  font-weight: 700;
+  box-shadow: 0 4px 16px rgba(63, 199, 234, 0.4);
+}
+
+.solis-pill-inactive {
+  background: rgba(30, 62, 88, 0.50);
+  color: #C7D4DD;
+  border: 1px solid #3A4E5A;
+}
+
+.solis-pill-inactive:hover {
+  background: rgba(44, 88, 114, 0.80);
+  color: #F5F8FA;
+  border-color: #5A8AA3;
+}
+
+/* Glowing Emerald 3D Orb Effect */
+.emerald-orb-glow {
+  background: radial-gradient(circle at 35% 35%, #A7F3D0 0%, #22C55E 40%, #15803D 75%, #052E16 100%);
+  box-shadow: 
+    0 0 50px rgba(34, 197, 94, 0.7),
+    inset 0 0 30px rgba(255, 255, 255, 0.6),
+    0 20px 45px rgba(0, 0, 0, 0.9);
+  animation: orb-pulse 4s ease-in-out infinite alternate;
+}
+
+@keyframes orb-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 40px rgba(34, 197, 94, 0.6), inset 0 0 25px rgba(255, 255, 255, 0.5);
+  }
+  100% {
+    transform: scale(1.05);
+    box-shadow: 0 0 65px rgba(34, 197, 94, 0.9), inset 0 0 35px rgba(255, 255, 255, 0.8);
+  }
+}
+
+/* Dot Matrix Grid Pattern */
+.dot-matrix-bg {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.14) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+.hatched-bar-pattern {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.18),
+    rgba(255, 255, 255, 0.18) 4px,
+    transparent 4px,
+    transparent 8px
+  );
 }
