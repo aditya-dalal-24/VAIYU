@@ -1,23 +1,98 @@
-# Node
-node_modules/
-dist/
-
-# Java
-target/
-
-# Python
-__pycache__/
-*.pyc
-.venv/
-venv/
-
-# Environment
+# ==================================================
+# ENVIRONMENT VARIABLES AND SECRETS
+# ==================================================
 .env
-.env.local
+.env.*
+*.env
 
-# IDE
+# EXCEPTIONS for environment templates
+!.env.example
+!.env.template
+!*.env.example
+!*.env.template
+!frontend/.env.example
+!backend/.env.example
+!ai-service/.env.example
+
+# SECRETS
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+secrets/
+credentials/
+service-account*.json
+
+# ==================================================
+# FRONTEND
+# ==================================================
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ==================================================
+# SPRING BOOT / MAVEN BACKEND
+# ==================================================
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+
+# ==================================================
+# PYTHON / FASTAPI AI SERVICE
+# ==================================================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+ai-service/.venv/
+ai-service/venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ==================================================
+# IDE / EDITOR FILES
+# ==================================================
 .idea/
 .vscode/
+*.iml
 
-# OS
+# ==================================================
+# OPERATING SYSTEM FILES
+# ==================================================
 .DS_Store
+Thumbs.db
+Desktop.ini
+
+# ==================================================
+# DATABASE / LOCAL DATA
+# ==================================================
+*.db
+*.sqlite
+*.sqlite3
+*.sql.gz
+*.dump
+
+ai-service/data/raw/
+ai-service/data/processed/
+ai-service/trained_models/
+
+# ==================================================
+# EXCEPTIONS (DO NOT IGNORE)
+# ==================================================
+!docker-compose.yml
+!README.md
+!docs/
+!shared/contracts/
+!shared/schemas/
+!backend/src/main/resources/db/
+!.gitkeep
