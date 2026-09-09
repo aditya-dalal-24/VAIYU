@@ -3,7 +3,7 @@ import React, { useEffect, useRef } from 'react';
 interface WindParticleCanvasProps {
   centerLat: number;
   centerLong: number;
-  maxWindSpeedKph: number;
+  maxWindSpeedKmh: number;
   isActive: boolean;
 }
 
@@ -18,7 +18,7 @@ interface Particle {
 export const WindParticleCanvas: React.FC<WindParticleCanvasProps> = ({
   centerLat,
   centerLong,
-  maxWindSpeedKph,
+  maxWindSpeedKmh,
   isActive
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -95,7 +95,7 @@ export const WindParticleCanvas: React.FC<WindParticleCanvasProps> = ({
         
         // Intensity decreases with distance from eyewall
         const normalizedDist = dist / scale;
-        const intensity = Math.exp(-normalizedDist * 0.8) * (maxWindSpeedKph / 180);
+        const intensity = Math.exp(-normalizedDist * 0.8) * (maxWindSpeedKmh / 180);
         
         // Velocity vector components (u, v)
         const u = Math.cos(swirlAngle) * (2.5 + intensity * 3);
@@ -135,7 +135,7 @@ export const WindParticleCanvas: React.FC<WindParticleCanvasProps> = ({
         cancelAnimationFrame(animationFrameId.current);
       }
     };
-  }, [centerLat, centerLong, maxWindSpeedKph, isActive]);
+  }, [centerLat, centerLong, maxWindSpeedKmh, isActive]);
 
   if (!isActive) return null;
 
@@ -146,4 +146,3 @@ export const WindParticleCanvas: React.FC<WindParticleCanvasProps> = ({
     />
   );
 };
-

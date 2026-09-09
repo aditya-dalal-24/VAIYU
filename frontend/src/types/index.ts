@@ -2,25 +2,22 @@ export interface CycloneObservation {
   id?: string;
   cycloneId?: string;
   observedAt: string;
-  latitude: number;
-  longitude: number;
-  windSpeedKph: number;
+  lat: number;
+  long: number;
+  windSpeedKmh: number;
   pressureHpa: number;
-  movementDirectionDegrees?: number;
-  movementSpeedKph?: number;
-  source?: string;
+  movementDirectionDeg?: number;
+  movementSpeedKmh?: number;
+  intensityCategory: string;
 }
 
 export interface Cyclone {
   id: string;
-  externalSource?: string;
-  externalId?: string;
   name: string;
   basin: string;
-  status: string;
-  currentCategory?: string;
+  seasonYear: number;
+  status: 'ACTIVE' | 'DISSIPATED' | 'HISTORICAL';
   createdAt?: string;
-  updatedAt?: string;
   latestObservation?: CycloneObservation;
   observations?: CycloneObservation[];
 }
@@ -30,7 +27,7 @@ export interface PredictedTrackPoint {
   predictionId?: string;
   forecastHour: number;
   lat: number;
-  longCoord: number;
+  long: number;
   confidenceRadiusKm: number;
 }
 
@@ -122,10 +119,10 @@ export interface UserProfile {
   name: string;
   email: string;
   avatarUrl: string;
-  role: 'ADMIN' | 'METEOROLOGIST' | 'OPERATOR';
+  role: 'ADMIN' | 'METEOROLOGIST' | 'OPERATOR' | 'ANALYST' | 'OBSERVER';
   title: string;
   organization: string;
-  authProvider: 'google' | 'github' | 'imd_sso';
+  authProvider: 'google' | 'github' | 'imd_sso' | 'credentials';
 }
 
 export interface AuthResponse {

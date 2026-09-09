@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Bell, Shield, Wind, Eye, Navigation, History, AlertTriangle, Globe, X, Check, Command, Cpu, Activity, ExternalLink, KeyRound, LogOut } from 'lucide-react';
+import { Search, Bell, Shield, Eye, Navigation, AlertTriangle, Globe, X, Check, Cpu, Activity, ExternalLink, KeyRound, LogOut, Home } from 'lucide-react';
 import type { Cyclone } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { OAuthLoginModal } from '../auth/OAuthLoginModal';
@@ -66,12 +66,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, []);
 
   const navItems = [
+    { id: 'landing', label: 'Home', icon: Home },
     { id: 'dashboard', label: 'Overview', icon: Shield },
     { id: 'map', label: 'Live 3D Globe', icon: Globe },
-    { id: 'details', label: 'Telemetry', icon: Wind },
-    { id: 'satellite', label: 'Grad-CAM Vision', icon: Eye },
+    { id: 'satellite', label: 'Grad-CAM AI', icon: Eye },
     { id: 'predictions', label: 'Trajectory AI', icon: Navigation },
-    { id: 'historical', label: 'Storm KNN', icon: History },
     { id: 'alerts', label: 'Advisories', icon: AlertTriangle },
   ];
 
@@ -111,28 +110,40 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header className="sticky top-0 z-50 pt-4 pb-2 px-4 md:px-8 max-w-7xl mx-auto w-full">
       <div 
         ref={navContainerRef}
-        className="solis-card px-6 py-3 flex items-center justify-between border border-[#3A4E5A] rounded-[24px] bg-[#0B1B2B]/90 backdrop-blur-2xl relative shadow-xl"
+        className="px-6 py-2.5 flex items-center justify-between border border-white/90 rounded-full bg-white/85 backdrop-blur-2xl relative shadow-xl gap-4 transition-all duration-300 hover:border-[#FF5500]/50"
       >
-        {/* Brand Name */}
-        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setActiveTab('dashboard')}>
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#3FC7EA] to-[#2C5872] flex items-center justify-center shadow-lg shadow-[#3FC7EA]/20 group-hover:scale-105 transition-transform">
-            <Globe className="w-4 h-4 text-[#0B1B2B] animate-spin-slow font-bold" />
+        {/* COSMO Style Brand Mark */}
+        <div className="flex items-center gap-3 cursor-pointer group shrink-0" onClick={() => setActiveTab('landing')}>
+          <div className="w-9 h-9 rounded-xl bg-[#1A1917] flex items-center justify-center shadow-md border border-[#1A1917] relative group-hover:scale-105 transition-transform overflow-hidden">
+            <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="4" y="4" width="7" height="7" rx="1.5" />
+              <rect x="13" y="4" width="7" height="7" rx="1.5" />
+              <rect x="4" y="13" width="7" height="7" rx="1.5" />
+              <rect x="13" y="13" width="7" height="7" rx="1.5" fill="#FF5500" />
+            </svg>
           </div>
-          <span className="font-extrabold text-2xl tracking-tight text-[#F5F8FA] font-sans">
-            CycloVision
-          </span>
+          <div className="flex flex-col">
+            <span className="font-heading font-black text-lg tracking-tight text-[#1A1917]">
+              CYCLOVISION<span className="text-[10px] font-normal align-top ml-0.5 text-[#FF5500]">™</span>
+            </span>
+            <span className="text-[9px] font-mono text-[#6E6860] tracking-widest uppercase font-bold -mt-1">
+              AI Command Center
+            </span>
+          </div>
         </div>
 
-        {/* Center Pill Navigation Tabs */}
-        <nav className="hidden lg:flex items-center gap-1.5 bg-[#132C42]/90 p-1.5 rounded-full border border-[#3A4E5A]">
+        {/* Center Capsule Navigation Tabs */}
+        <nav className="flex items-center gap-1 bg-white/60 p-1.5 rounded-full border border-white/80 shadow-inner overflow-x-auto max-w-[60vw] md:max-w-none no-scrollbar">
           {navItems.map((item) => {
             const isActive = activeTab === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`px-5 py-2 rounded-full text-xs font-medium transition-all duration-200 ${
-                  isActive ? 'solis-pill-active' : 'solis-pill-inactive'
+                className={`px-3.5 py-1.5 rounded-full text-xs font-heading font-bold whitespace-nowrap shrink-0 transition-all duration-200 cursor-pointer active:scale-95 ${
+                  isActive 
+                    ? 'bg-[#1A1917] text-white shadow-sm' 
+                    : 'text-[#6E6860] hover:text-[#1A1917] hover:bg-white/80'
                 }`}
               >
                 {item.label}
@@ -141,43 +152,51 @@ export const Navbar: React.FC<NavbarProps> = ({
           })}
         </nav>
 
-        {/* Right Controls: Search, Notifications, Avatar Profile */}
-        <div className="flex items-center gap-3 relative">
+        {/* Right Controls: Real-time update ticker, Search, Notifications, Avatar Profile */}
+        <div className="flex items-center gap-2.5 relative shrink-0">
+          {/* UPD Status Ticker Pill */}
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono font-bold text-[#6E6860] bg-white/60 border border-white/80">
+            <span className="w-2 h-2 rounded-full bg-[#22C55E]"></span>
+            UPD: 45s ago
+          </span>
+
           {/* Search Trigger Button */}
           <button 
             onClick={() => setIsSearchOpen(true)}
-            className="w-10 h-10 rounded-full bg-[#1E3E58] text-[#C7D4DD] hover:text-[#F5F8FA] hover:bg-[#2C5872] flex items-center justify-center transition-all border border-[#3A4E5A] shadow-sm relative group"
-            title="Search storms or models (Ctrl+K)"
+            className="w-9 h-9 rounded-full bg-white/70 text-[#1A1917] hover:bg-white flex items-center justify-center transition-all border border-white/90 shadow-sm relative group hover:border-[#FF5500]/50"
+            title="Search active cyclones or models"
           >
-            <Search className="w-4 h-4 text-[#C7D4DD] group-hover:text-[#F5F8FA] transition-colors" />
+            <Search className="w-4 h-4 text-[#1A1917] group-hover:scale-110 transition-transform" />
           </button>
-          
+
           {/* Notifications Bell Trigger Button */}
           <button 
             onClick={() => {
               setIsNotificationsOpen(!isNotificationsOpen);
               setIsProfileOpen(false);
             }}
-            className="w-10 h-10 rounded-full bg-[#1E3E58] text-[#C7D4DD] hover:text-[#F5F8FA] hover:bg-[#2C5872] flex items-center justify-center transition-all border border-[#3A4E5A] shadow-sm relative group"
+            className="w-9 h-9 rounded-full bg-white/70 text-[#1A1917] hover:bg-white flex items-center justify-center transition-all border border-white/90 shadow-sm relative group hover:border-[#FF5500]/50"
             title="Real-time Advisories & Notifications"
           >
-            <Bell className="w-4 h-4 text-[#C7D4DD] group-hover:text-[#F5F8FA] transition-colors" />
+            <Bell className="w-4 h-4 text-[#1A1917] transition-colors" />
             {hasUnread && (
-              <span className="absolute top-[6px] right-[6px] w-2.5 h-2.5 bg-[#3FC7EA] rounded-full border-2 border-[#0B1B2B] shadow-[0_0_8px_rgba(63,199,234,0.6)] animate-pulse"></span>
+              <span className="absolute top-[6px] right-[6px] w-2 h-2 bg-[#FF5500] rounded-full border border-white"></span>
             )}
           </button>
 
           {/* User Profile Avatar Trigger Button */}
           <button 
             onClick={() => {
-              setIsProfileOpen(!isProfileOpen);
+              setActiveTab('profile');
               setIsNotificationsOpen(false);
             }}
-            className="w-10 h-10 rounded-full overflow-hidden border border-[#3A4E5A] shadow-sm hover:border-[#3FC7EA] transition-all flex items-center justify-center bg-[#1E3E58] relative group focus:outline-none"
+            className={`w-9 h-9 rounded-full overflow-hidden border shadow-sm transition-all flex items-center justify-center bg-white relative group focus:outline-none ${
+              activeTab === 'profile' ? 'border-[#FF5500] ring-2 ring-[#FF5500]/30' : 'border-white/90 hover:border-[#FF5500]'
+            }`}
             title="Operator Profile & System Settings"
           >
             <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80"
+              src={user?.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80"}
               alt="Operator Avatar"
               className="w-full h-full object-cover group-hover:scale-105 transition-transform"
             />
@@ -389,22 +408,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                         >
                           <div>
                             <span className="font-bold text-white block">{c.name}</span>
-                            <span className="text-[11px] text-gray-400">{c.basin} | Category: {c.currentCategory || 'Very Severe Cyclonic Storm'}</span>
+                            <span className="text-[11px] text-gray-400">{c.basin} | Category: {c.latestObservation?.intensityCategory || 'Very Severe Cyclonic Storm'}</span>
                           </div>
-                          <span className="font-mono text-emerald-400 font-bold">{c.latestObservation?.windSpeedKph || 165} km/h</span>
+                          <span className="font-mono text-emerald-400 font-bold">{c.latestObservation?.windSpeedKmh || 165} km/h</span>
                         </div>
                       ))}
                   </div>
                 </div>
               )}
-            </div>
-
-            {/* Footer keyboard guide */}
-            <div className="p-3 bg-gray-950 border-t border-gray-800 flex justify-between items-center text-[11px] text-gray-500 font-mono">
-              <span className="flex items-center gap-1">
-                <Command className="w-3 h-3" /> + K to open anytime
-              </span>
-              <span>Press ESC to close</span>
             </div>
           </div>
         </div>
@@ -412,5 +423,4 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
-
 

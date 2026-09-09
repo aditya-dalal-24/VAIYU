@@ -14,10 +14,10 @@ export const getPredictions = async (cycloneId: string): Promise<Prediction> => 
       confidenceScore: 0.88,
       explanation: 'Sea surface temperature (>29.5°C) and low vertical wind shear in northern Arabian Sea support further intensification before potential landfall near Kutch.',
       trajectory: [
-        { forecastHour: 6, lat: 20.1, longCoord: 68.2, confidenceRadiusKm: 35 },
-        { forecastHour: 12, lat: 21.0, longCoord: 68.7, confidenceRadiusKm: 55 },
-        { forecastHour: 24, lat: 22.3, longCoord: 69.4, confidenceRadiusKm: 95 },
-        { forecastHour: 48, lat: 23.8, longCoord: 70.3, confidenceRadiusKm: 150 },
+        { forecastHour: 6, lat: 20.1, long: 68.2, confidenceRadiusKm: 35 },
+        { forecastHour: 12, lat: 21.0, long: 68.7, confidenceRadiusKm: 55 },
+        { forecastHour: 24, lat: 22.3, long: 69.4, confidenceRadiusKm: 95 },
+        { forecastHour: 48, lat: 23.8, long: 70.3, confidenceRadiusKm: 150 },
       ]
     };
   }
@@ -31,4 +31,3 @@ export const runPredictionPipeline = async (cycloneId: string): Promise<Predicti
     return getPredictions(cycloneId);
   }
 };
-

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { UserProfile } from '../types';
-import { loginWithOAuthProvider, getCurrentUserSession } from '../api/auth';
+import { loginWithOAuthProvider, loginWithCredentials as apiLoginWithCredentials, getCurrentUserSession } from '../api/auth';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -8,6 +8,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
   loginWithOAuth: (provider: 'google' | 'github' | 'imd_sso') => Promise<void>;
+  loginWithCredentials: (emailOrId: string, password?: string, role?: 'METEOROLOGIST' | 'ADMIN' | 'ANALYST' | 'OBSERVER') => Promise<void>;
   logout: () => void;
 }
 
@@ -45,6 +46,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithCredentials = async (
+    emailOrId: string,
+    password?: string,
+    role: 'METEOROLOGIST' | 'ADMIN' | 'ANALYST' | 'OBSERVER' = 'METEOROLOGIST'
+  ) => {
+    setLoading(true);
+    try {
+      const authRes = await apiLoginWithCredentials(emailOrId, password, role);
+      setUser(authRes.user);
+      setToken(authRes.token);
+      localStorage.setItem('cyclovision_auth_token', authRes.token);
+      localStorage.setItem('cyclovision_user_profile', JSON.stringify(authRes.user));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = () => {
     setUser(null);
     setToken(null);
@@ -60,6 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         loading,
         loginWithOAuth,
+        loginWithCredentials,
         logout
       }}
     >

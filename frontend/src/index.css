@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,69 +6,121 @@
 
 :root {
   color-scheme: dark;
+  --background: 220 14% 96%;
+  --foreground: 0 0% 8%;
+  --primary: 274 40% 16%;
+  --primary-foreground: 220 14% 96%;
+  --accent: 33 71% 57%;
+  --accent-foreground: 0 0% 8%;
+  --muted: 32 6% 45%;
+  --page: 220 14% 96%;
+  --device-frame: 225 73% 13%;
+  --main-canvas: 39 44% 94%;
+  --panel: 35 35% 90%;
+  --glass-card: 0 0% 100%;
+  --dark-overlay-card: 23 33% 32%;
+  --image-tint: 24 48% 32%;
+  --muted-tile: 35 29% 87%;
+  --soft-chip: 0 0% 97%;
+  --cat-terrain: 25 51% 32%;
+  --cat-solar: 32 85% 62%;
+  --cat-ui-dark: 274 40% 16%;
+  --cat-glass: 37 15% 83%;
+  --border: 0 0% 8%;
+  --input: 0 0% 8%;
+  --ring: 274 40% 16%;
+  --radius: 20px;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 body {
   margin: 0;
   padding: 0;
-  background-color: #0B1B2B;
+  background-color: #121110;
   background-image: 
-    radial-gradient(circle at 50% 0%, rgba(63, 199, 234, 0.15) 0%, transparent 60%),
-    radial-gradient(circle at 85% 50%, rgba(30, 62, 88, 0.40) 0%, transparent 50%),
-    radial-gradient(circle at 15% 85%, rgba(19, 44, 66, 0.50) 0%, transparent 50%),
-    linear-gradient(180deg, #0B1B2B 0%, #08131F 100%);
-  color: #F5F8FA;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    radial-gradient(circle at 50% 0%, rgba(255, 85, 0, 0.14) 0%, transparent 45%),
+    radial-gradient(circle at 85% 30%, rgba(255, 107, 53, 0.08) 0%, transparent 40%),
+    linear-gradient(180deg, #181614 0%, #121110 50%, #0E0D0C 100%);
+  color: #1A1917;
+  font-family: 'Outfit', 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
   min-height: 100vh;
 }
 
-/* Micro-interaction polish: scale press feedback for buttons (Emil Design Engineering) */
+h1, h2, h3, h4, h5, h6, .font-heading {
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+}
+
+code, pre, .font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Micro-interaction polish: scale press feedback for buttons */
 button, .interactive-btn {
-  transition: transform 150ms var(--ease-out), background-color 150ms var(--ease-out), border-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
+  transition: transform 150ms var(--ease-spring), background-color 150ms var(--ease-out), border-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
 }
 
 button:active:not(:disabled), .interactive-btn:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 
 /* Popover & Tooltip Scale-In Animation */
 @keyframes popoverScaleIn {
   0% {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.94) translateY(-4px);
   }
   100% {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1) translateY(0);
   }
 }
 
 .animate-popover {
-  animation: popoverScaleIn 160ms var(--ease-out) forwards;
+  animation: popoverScaleIn 180ms var(--ease-spring) forwards;
   transform-origin: var(--transform-origin, top right);
 }
 
-/* Futuristic Cybernetic Background Grid Overlay */
-.futuristic-grid-bg {
-  background-image: 
-    linear-gradient(rgba(124, 147, 160, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(124, 147, 160, 0.08) 1px, transparent 1px);
-  background-size: 40px 40px;
-  background-position: center center;
+/* Shimmer Light Sweep Effect for Buttons and Badges */
+@keyframes shimmerSweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
 }
 
-/* Radar Sweep Animation */
-@keyframes futuristic-radar {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.shimmer-badge {
+  position: relative;
+  overflow: hidden;
 }
 
-.radar-sweep {
-  animation: futuristic-radar 8s linear infinite;
+.shimmer-badge::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  animation: shimmerSweep 3s infinite;
+}
+
+/* Border Glow Tracer Animation */
+@keyframes borderGlowPulse {
+  0%, 100% { border-color: rgba(255, 85, 0, 0.4); box-shadow: 0 0 15px rgba(255, 85, 0, 0.15); }
+  50% { border-color: rgba(255, 85, 0, 0.9); box-shadow: 0 0 30px rgba(255, 85, 0, 0.35); }
+}
+
+.border-glow-active {
+  animation: borderGlowPulse 3s ease-in-out infinite;
+}
+
+/* Solar Amber Glow Pulse */
+@keyframes solarHaloGlow {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+
+.solar-halo-glow {
+  animation: solarHaloGlow 4s ease-in-out infinite;
 }
 
 /* Custom Scrollbars */
@@ -78,93 +130,139 @@ button:active:not(:disabled), .interactive-btn:active:not(:disabled) {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0B1B2B;
+  background: #121110;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #3A4E5A;
+  background: #3A3530;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #5A8AA3;
+  background: #5C554B;
 }
 
-/* Solis Luxury Glass & Card Primitives (Style Guide #1E3E58 surface, #3A4E5A border) */
+/* COSMO Champagne Aerospace Glass Cards & Panels (Matching Reference Photo) */
 .solis-card {
-  background: rgba(30, 62, 88, 0.85);
+  background: rgba(246, 241, 233, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 24px;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid #3A4E5A;
-  border-radius: 28px;
+  color: #141414;
   box-shadow: 
-    0 20px 50px rgba(7, 17, 28, 0.8),
-    inset 0 1px 0 rgba(245, 248, 250, 0.08);
-  transition: transform 200ms var(--ease-out), background 200ms var(--ease-out), border-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
+    0 16px 40px rgba(0, 0, 0, 0.30),
+    0 4px 12px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+  transition: border-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out), transform 150ms var(--ease-out);
 }
 
 .solis-card:hover {
-  border-color: #3FC7EA;
-  background: rgba(44, 88, 114, 0.90);
+  border-color: rgba(255, 85, 0, 0.45);
   box-shadow: 
-    0 25px 65px rgba(7, 17, 28, 0.95),
-    0 0 30px rgba(63, 199, 234, 0.2);
+    0 20px 50px rgba(0, 0, 0, 0.40),
+    0 6px 16px rgba(0, 0, 0, 0.15);
 }
 
 .solis-subcard {
-  background: rgba(19, 44, 66, 0.85);
-  border: 1px solid #3A4E5A;
-  border-radius: 20px;
+  background: rgba(235, 228, 218, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.7);
   transition: border-color 150ms var(--ease-out), background-color 150ms var(--ease-out);
 }
 
+.solis-subcard:hover {
+  border-color: rgba(255, 85, 0, 0.5);
+  background: rgba(246, 241, 233, 0.95);
+}
+
 .glass-panel {
-  background: rgba(30, 62, 88, 0.85);
+  background: rgba(246, 241, 233, 0.92);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid #3A4E5A;
-  box-shadow: 0 16px 40px rgba(7, 17, 28, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  color: #141414;
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+}
+
+.card-tone-telemetry {
+  background: rgba(246, 241, 233, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  color: #141414;
+  box-shadow: 
+    0 16px 40px rgba(0, 0, 0, 0.30),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+}
+
+.card-tone-threat {
+  background: linear-gradient(145deg, rgba(250, 242, 232, 0.94) 0%, rgba(245, 235, 222, 0.96) 100%);
+  border: 1px solid rgba(255, 85, 0, 0.4);
+  color: #141414;
+  box-shadow: 
+    0 16px 40px rgba(0, 0, 0, 0.30),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+}
+
+.card-tone-ai {
+  background: linear-gradient(145deg, rgba(246, 241, 233, 0.94) 0%, rgba(240, 234, 224, 0.96) 100%);
+  border: 1px solid rgba(255, 85, 0, 0.4);
+  color: #141414;
+  box-shadow: 
+    0 16px 40px rgba(0, 0, 0, 0.30),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+}
+
+.card-tone-globe {
+  background: linear-gradient(145deg, rgba(20, 18, 16, 0.95) 0%, rgba(12, 10, 8, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #F5F8FA;
+  box-shadow: 
+    0 24px 60px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
 }
 
 .solis-pill-active {
-  background: #3FC7EA;
-  color: #0B1B2B;
+  background: #141414;
+  color: #FFFFFF;
   font-weight: 700;
-  box-shadow: 0 4px 16px rgba(63, 199, 234, 0.4);
-  transition: transform 150ms var(--ease-out), background-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: transform 150ms var(--ease-spring), background-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
 }
 
 .solis-pill-inactive {
-  background: rgba(30, 62, 88, 0.50);
-  color: #C7D4DD;
-  border: 1px solid #3A4E5A;
-  transition: transform 150ms var(--ease-out), background-color 150ms var(--ease-out), border-color 150ms var(--ease-out), color 150ms var(--ease-out);
+  background: rgba(255, 255, 255, 0.6);
+  color: #6C665F;
+  border: 1px solid rgba(210, 200, 188, 0.8);
+  transition: transform 150ms var(--ease-spring), background-color 150ms var(--ease-out), border-color 150ms var(--ease-out), color 150ms var(--ease-out);
 }
 
 .solis-pill-inactive:hover {
-  background: rgba(44, 88, 114, 0.80);
-  color: #F5F8FA;
-  border-color: #5A8AA3;
+  background: rgba(255, 255, 255, 0.95);
+  color: #141414;
+  border-color: rgba(255, 85, 0, 0.5);
 }
 
 /* Glowing Emerald 3D Orb Effect */
 .emerald-orb-glow {
-  background: radial-gradient(circle at 35% 35%, #A7F3D0 0%, #22C55E 40%, #15803D 75%, #052E16 100%);
+  background: radial-gradient(circle at 35% 35%, #A7F3D0 0%, #10B981 40%, #047857 75%, #022C22 100%);
   box-shadow: 
-    0 0 50px rgba(34, 197, 94, 0.7),
-    inset 0 0 30px rgba(255, 255, 255, 0.6),
-    0 20px 45px rgba(0, 0, 0, 0.9);
+    0 0 30px rgba(16, 185, 129, 0.4),
+    inset 0 0 20px rgba(255, 255, 255, 0.4),
+    0 15px 35px rgba(0, 0, 0, 0.8);
   animation: orb-pulse 4s ease-in-out infinite alternate;
 }
 
 @keyframes orb-pulse {
   0% {
     transform: scale(1);
-    box-shadow: 0 0 40px rgba(34, 197, 94, 0.6), inset 0 0 25px rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.3), inset 0 0 15px rgba(255, 255, 255, 0.3);
   }
   100% {
-    transform: scale(1.05);
-    box-shadow: 0 0 65px rgba(34, 197, 94, 0.9), inset 0 0 35px rgba(255, 255, 255, 0.8);
+    transform: scale(1.03);
+    box-shadow: 0 0 40px rgba(16, 185, 129, 0.5), inset 0 0 25px rgba(255, 255, 255, 0.5);
   }
 }
 

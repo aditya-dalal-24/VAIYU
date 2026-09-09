@@ -14,12 +14,16 @@ import { HistoricalSimilarityPage } from './pages/HistoricalSimilarityPage';
 import { AlertsPage } from './pages/AlertsPage';
 import { Globe3DVisualizer } from './components/map/Globe3DVisualizer';
 
+import { LoginPage } from './pages/LoginPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { LandingPage } from './pages/LandingPage';
+
 import { AuthProvider } from './context/AuthContext';
 
 const queryClient = new QueryClient();
 
 export function CycloVisionApp() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('landing');
   const [cyclones, setCyclones] = useState<Cyclone[]>([]);
   const [selectedCyclone, setSelectedCyclone] = useState<Cyclone | null>(null);
   const [prediction, setPrediction] = useState<Prediction | null>(null);
@@ -73,15 +77,15 @@ export function CycloVisionApp() {
 
   if (loading || !selectedCyclone) {
     return (
-      <div className="min-h-screen bg-[#0B0F19] text-white flex flex-col items-center justify-center space-y-4">
-        <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-sm font-semibold tracking-wider text-indigo-300">Initializing CycloVision AI Intelligence Platform...</p>
+      <div className="min-h-screen bg-[#121110] text-white flex flex-col items-center justify-center space-y-4">
+        <div className="w-12 h-12 border-4 border-[#FF5500] border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm font-semibold tracking-wider text-[#FF5500]">Initializing CycloVision AI Intelligence Platform...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#03050B] text-gray-100 flex flex-col selection:bg-indigo-500 selection:text-white font-sans">
+    <div className="min-h-screen bg-[#121110] bg-gradient-to-b from-[#181614] via-[#121110] to-[#0E0D0C] text-[#1A1917] flex flex-col font-sans">
       {/* Top Navbar */}
       <Navbar 
         activeTab={activeTab} 
@@ -92,6 +96,14 @@ export function CycloVisionApp() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
+        {activeTab === 'landing' && (
+          <LandingPage
+            cyclone={selectedCyclone}
+            prediction={prediction}
+            onNavigate={setActiveTab}
+          />
+        )}
+
         {activeTab === 'dashboard' && (
           <DashboardPage
             cyclones={cyclones}
@@ -106,12 +118,12 @@ export function CycloVisionApp() {
 
         {activeTab === 'map' && (
           <div className="space-y-4">
-            <div className="flex justify-between items-center glass-panel p-4 rounded-xl border border-gray-800">
+            <div className="flex justify-between items-center glass-panel p-4 rounded-xl border border-[#3A4E5A] bg-[#132C42]/90">
               <div>
                 <h2 className="font-bold text-white text-lg">Interactive 3D Earth Wind Vector Globe</h2>
                 <p className="text-xs text-gray-400">Click and drag to rotate the globe in 3D | Scroll wheel to zoom</p>
               </div>
-              <span className="text-xs text-emerald-400 font-mono px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30">
+              <span className="text-xs text-[#3FC7EA] font-mono px-3 py-1 rounded-full bg-[#3FC7EA]/10 border border-[#3FC7EA]/30 font-bold">
                 3D Spherical Vector Field Active
               </span>
             </div>
@@ -141,12 +153,15 @@ export function CycloVisionApp() {
         {activeTab === 'alerts' && (
           <AlertsPage cyclone={selectedCyclone} />
         )}
-      </main>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-800/80 py-4 text-center text-xs text-gray-500 glass-panel mt-8">
-        <p>CycloVision — Multi-Modal AI Tropical Cyclone Intelligence & Early Warning System</p>
-      </footer>
+        {activeTab === 'profile' && (
+          <ProfilePage onNavigate={setActiveTab} />
+        )}
+
+        {activeTab === 'login' && (
+          <LoginPage cyclone={selectedCyclone} onLoginSuccess={() => setActiveTab('dashboard')} />
+        )}
+      </main>
     </div>
   );
 }
