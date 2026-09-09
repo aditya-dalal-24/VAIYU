@@ -1,0 +1,254 @@
+CycloVision AI Service Contract
+Purpose: Define the stable communication contract between the Spring Boot backend and the FastAPI AI/ML service
+before model implementation begins.
+1. Architecture Boundary
+The FastAPI service is an internal AI inference service. The React frontend must never call it directly. Spring Boot remains
+the public API gateway, orchestration layer and persistence authority.
+2. Contract Principles
+Versioned: All AI endpoints use /api/v1.
+Backend-owned persistence: FastAPI returns analysis results; Spring Boot validates and stores application records.
+Partial analysis: Missing satellite imagery must not prevent trajectory prediction when numerical data is available.
+No fake scientific output: Models must clearly report unavailable/not-run status instead of fabricating predictions.
+Stable units: Coordinates use decimal degrees and timestamps use ISO-8601 UTC.
+React Frontend
+      |
+      | REST APIs
+      v
+Spring Boot Backend
+      |
+      | Internal REST / JSON
+      v
+FastAPI AI Service
+      |
+      +-- Satellite Vision
+      +-- Trajectory Prediction
+      +-- Intensity Prediction
+      +-- Historical Similarity
+      +-- Explainability
+      |
+      v
+   ML Models
+3. AI Service Endpoints
+GET  /api/v1/health
+POST /api/v1/analysis/cyclone
+Future specialized endpoints:
+POST /api/v1/analysis/satellite
+POST /api/v1/predictions/trajectory
+POST /api/v1/predictions/intensity
+POST /api/v1/similarity/historical
+Hackathon recommendation: Implement GET /health and one unified POST /analysis/cyclone endpoint first.
+4. Health Endpoint Contract
+GET /api/v1/health
+{
+}
+  "status": "UP",
+  "service": "cyclovision-ai-service",
+  "version": "1.0.0"
+5. Unified Analysis Request
+POST /api/v1/analysis/cyclone
+{
+  "requestId": "uuid",
+  "cycloneId": "uuid",
+  "analysisTypes": [
+    "SATELLITE_ANALYSIS",
+    "TRAJECTORY_PREDICTION",
+    "INTENSITY_PREDICTION",
+    "HISTORICAL_SIMILARITY"
+  ],
+  "currentObservation": {
+    "timestamp": "2026-09-08T12:00:00Z",
+    "latitude": 15.2,
+    "longitude": 88.4,
+    "windSpeedKph": 110.0,
+    "pressureHpa": 970.0,
+    "movementSpeedKph": 15.0,
+    "movementDirectionDegrees": 315.0
+  },
+  "observationHistory": [
+    {
+      "timestamp": "2026-09-08T06:00:00Z",
+      "latitude": 14.5,
+      "longitude": 89.1,
+      "windSpeedKph": 100.0,
+      "pressureHpa": 975.0
+    }
+  ],
+  "environmentalData": {
+    "seaSurfaceTemperatureC": 29.5,
+    "humidityPercent": 80.0,
+    "windShearKph": 12.0
+  },
+  "satelliteImage": {
+    "imageUrl": "https://example.com/satellite-image.png",
+    "imageType": "INFRARED",
+    "capturedAt": "2026-09-08T12:00:00Z"
+  }
+}
+Rules: observationHistory is ordered oldest to newest. satelliteImage is optional. Large image binaries should not be
+placed inside JSON.
+6. Unified Analysis Response
+{
+  "requestId": "uuid",
+  "cycloneId": "uuid",
+  "analysisTimestamp": "2026-09-08T12:05:00Z",
+  "status": "COMPLETED",
+  "satelliteAnalysis": {
+    "status": "COMPLETED",
+    "cycloneDetected": true,
+    "confidence": 0.94,
+    "cycloneCenter": {
+      "latitude": 15.2,
+      "longitude": 88.4
+    },
+    "features": {
+      "eyeDetected": true,
+      "spiralStructureDetected": true,
+      "cloudDensity": 0.87
+    },
+    "model": {
+      "name": "cyclone-vision-v1",
+      "version": "1.0"
+    }
+  },
+  "trajectoryPrediction": {
+    "status": "COMPLETED",
+    "confidence": 0.82,
+    "predictedPositions": [
+      {
+        "forecastHours": 6,
+        "timestamp": "2026-09-08T18:00:00Z",
+        "latitude": 16.0,
+        "longitude": 87.8
+      },
+      {
+        "forecastHours": 12,
+        "timestamp": "2026-09-09T00:00:00Z",
+        "latitude": 16.8,
+        "longitude": 87.1
+      },
+      {
+        "forecastHours": 24,
+        "timestamp": "2026-09-09T12:00:00Z",
+        "latitude": 18.2,
+      }
+        "longitude": 86.0
+    ],
+    "model": {
+      "name": "trajectory-model-v1",
+      "version": "1.0"
+    }
+  },
+  "intensityPrediction": {
+    "status": "COMPLETED",
+    "trend": "INTENSIFYING",
+    "confidence": 0.86,
+    "forecast": [
+      {
+        "forecastHours": 24,
+        "windSpeedKph": 135.0,
+        "pressureHpa": 955.0
+      }
+    ],
+    "model": {
+      "name": "intensity-model-v1",
+      "version": "1.0"
+    }
+  },
+  "historicalSimilarity": {
+    "status": "NOT_AVAILABLE",
+    "similarCyclones": []
+  }
+}
+7. Analysis Status Values
+COMPLETED
+PARTIAL
+NOT_AVAILABLE
+FAILED
+VALIDATION_ERROR
+PARTIAL is valid when some requested analyses succeed and others cannot run.
+8. Satellite Analysis Contract
+MVP outputs should include cyclone detection, confidence and optional center coordinates. Eye detection, spiral structure
+and cloud density remain optional until supported by real models. Explainability visualizations such as Grad-CAM should
+be returned as an image reference or URL.
+9. Trajectory Prediction Contract
+Return ordered future positions with forecastHours, UTC timestamp, latitude and longitude. MVP horizons are 6, 12 and 24
+hours, with 48 hours optional. Future versions can add uncertainty radius or confidence corridor data.
+10. Intensity Prediction Contract
+Trend values:
+INTENSIFYING
+WEAKENING
+STABLE
+UNCERTAIN
+Numerical forecasts such as wind speed and pressure should be returned separately from the categorical trend.
+11. Historical Similarity Contract
+{
+  "status": "COMPLETED",
+  "similarCyclones": [
+    {
+      "historicalCycloneId": "historical-id",
+      "similarityScore": 0.91,
+      "rank": 1,
+      "similarityBasis": [
+        "TRACK_PATTERN",
+        "WIND_SPEED",
+        "PRESSURE"
+      ]
+}
+  ]
+    }
+FastAPI returns identifiers and similarity scores. Spring Boot can enrich historical cyclone information from the application
+database.
+12. Explainability Contract
+Explainability should be evidence-based and derived from model outputs or feature importance. Avoid using an LLM to
+invent scientific reasons.
+{
+}
+  "explanations": [
+    {
+      "analysisType": "INTENSITY_PREDICTION",
+      "factor": "SEA_SURFACE_TEMPERATURE",
+      "direction": "INCREASES_INTENSIFICATION_RISK",
+      "importance": 0.41
+    },
+    {
+      "analysisType": "INTENSITY_PREDICTION",
+      "factor": "PRESSURE_TREND",
+      "direction": "INCREASES_INTENSIFICATION_RISK",
+      "importance": 0.32
+    }
+  ]
+13. Error Contract
+{
+}
+  "timestamp": "2026-09-08T12:05:10Z",
+  "status": "VALIDATION_ERROR",
+  "errorCode": "INSUFFICIENT_OBSERVATION_HISTORY",
+  "message": "At least three observations are required.",
+  "requestId": "uuid"
+Do not expose Python stack traces, secrets or internal model paths.
+14. HTTP Status Strategy
+200 OK                  Analysis completed or partially completed
+400 Bad Request          Invalid request
+422 Unprocessable Entity Valid JSON but insufficient model input
+500 Internal Error       Unexpected AI service failure
+503 Service Unavailable  AI service or model unavailable
+15. Model Metadata
+Completed analyses should include model name and version. Optional future metadata includes inferenceTimeMs,
+trainingDatasetVersion and featureSetVersion.
+16. Spring Boot Client Boundary
+Spring Boot should use AI_SERVICE_URL as the single base URL. A dedicated backend client constructs requests,
+applies timeouts, validates responses and returns typed results to backend services. Controllers should never call FastAPI
+directly.
+17. Hackathon MVP Recommendation
+Implement first:
+1. GET  /api/v1/health
+2. POST /api/v1/analysis/cyclone
+Initial analyses:- TRAJECTORY_PREDICTION- INTENSITY_PREDICTION
+Add later:- SATELLITE_ANALYSIS- HISTORICAL_SIMILARITY- EXPLAINABILITY VISUALIZATION
+18. Contract Versioning Rules
+Do not silently rename existing fields. Prefer optional fields for backward-compatible expansion. Breaking changes require
+a new API version.
+19. Recommended Implementation Approach
+Store this document as the shared contract. Implement matching FastAPI Pydantic schemas and Spring Boot DTOs later.
+Test the integration first with mocked AI responses before connecting real ML models. This allows backend and AI
+development to proceed independently.
