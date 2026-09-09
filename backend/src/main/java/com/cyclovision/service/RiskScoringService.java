@@ -19,13 +19,14 @@ public class RiskScoringService {
     private final CycloneObservationRepository observationRepository;
 
     public RiskAssessment calculateRisk(String cycloneId) {
-        List<CycloneObservation> obs = observationRepository.findByCycloneIdOrderByObservedAtAsc(cycloneId);
+        UUID cycloneUuid = UUID.fromString(cycloneId);
+        List<CycloneObservation> obs = observationRepository.findByCycloneIdOrderByObservedAtAsc(cycloneUuid);
         double wind = 150.0;
         double pressure = 955.0;
 
         if (!obs.isEmpty()) {
             CycloneObservation latest = obs.get(obs.size() - 1);
-            if (latest.getWindSpeedKmh() != null) wind = latest.getWindSpeedKmh();
+            if (latest.getWindSpeedKph() != null) wind = latest.getWindSpeedKph();
             if (latest.getPressureHpa() != null) pressure = latest.getPressureHpa();
         }
 

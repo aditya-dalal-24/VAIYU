@@ -6,8 +6,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -24,43 +27,107 @@ public class DemoDataSeeder implements CommandLineRunner {
         if (cycloneRepository.count() > 0) return;
 
         // Seed Active Cyclone Biparjoy
-        Cyclone biparjoy = Cyclone.builder()
-                .id("cyclone-biparjoy-2023")
-                .name("Cyclone Biparjoy")
-                .basin("Arabian Sea")
-                .seasonYear(2023)
-                .status("ACTIVE")
-                .createdAt(LocalDateTime.now().minusDays(3))
-                .build();
+        Cyclone biparjoy = new Cyclone();
+        biparjoy.setName("Cyclone Biparjoy");
+        biparjoy.setBasin("Arabian Sea");
+        biparjoy.setStatus("ACTIVE");
         cycloneRepository.save(biparjoy);
 
-        List<CycloneObservation> biparjoyObs = List.of(
-                CycloneObservation.builder().id("obs-b-1").cyclone(biparjoy).observedAt(LocalDateTime.now().minusHours(48)).lat(14.2).longCoord(66.0).windSpeedKmh(90.0).pressureHpa(990.0).intensityCategory("Cyclonic Storm").build(),
-                CycloneObservation.builder().id("obs-b-2").cyclone(biparjoy).observedAt(LocalDateTime.now().minusHours(36)).lat(15.6).longCoord(66.4).windSpeedKmh(120.0).pressureHpa(978.0).intensityCategory("Severe Cyclonic Storm").build(),
-                CycloneObservation.builder().id("obs-b-3").cyclone(biparjoy).observedAt(LocalDateTime.now().minusHours(24)).lat(17.0).longCoord(66.9).windSpeedKmh(145.0).pressureHpa(965.0).intensityCategory("Very Severe Cyclonic Storm").build(),
-                CycloneObservation.builder().id("obs-b-4").cyclone(biparjoy).observedAt(LocalDateTime.now().minusHours(12)).lat(18.2).longCoord(67.3).windSpeedKmh(160.0).pressureHpa(958.0).intensityCategory("Very Severe Cyclonic Storm").build(),
-                CycloneObservation.builder().id("obs-b-5").cyclone(biparjoy).observedAt(LocalDateTime.now()).lat(19.4).longCoord(67.8).windSpeedKmh(165.0).pressureHpa(954.0).movementDirectionDeg(340.0).movementSpeedKmh(14.0).intensityCategory("Very Severe Cyclonic Storm").build()
-        );
-        observationRepository.saveAll(biparjoyObs);
+        CycloneObservation obsB1 = new CycloneObservation();
+        obsB1.setCyclone(biparjoy);
+        obsB1.setObservedAt(Instant.now().minus(48, ChronoUnit.HOURS));
+        obsB1.setLatitude(14.2);
+        obsB1.setLongitude(66.0);
+        obsB1.setWindSpeedKph(90.0);
+        obsB1.setPressureHpa(990.0);
+        obsB1.setSource("DEMO");
+        
+        CycloneObservation obsB2 = new CycloneObservation();
+        obsB2.setCyclone(biparjoy);
+        obsB2.setObservedAt(Instant.now().minus(36, ChronoUnit.HOURS));
+        obsB2.setLatitude(15.6);
+        obsB2.setLongitude(66.4);
+        obsB2.setWindSpeedKph(120.0);
+        obsB2.setPressureHpa(978.0);
+        obsB2.setSource("DEMO");
+        
+        CycloneObservation obsB3 = new CycloneObservation();
+        obsB3.setCyclone(biparjoy);
+        obsB3.setObservedAt(Instant.now().minus(24, ChronoUnit.HOURS));
+        obsB3.setLatitude(17.0);
+        obsB3.setLongitude(66.9);
+        obsB3.setWindSpeedKph(145.0);
+        obsB3.setPressureHpa(965.0);
+        obsB3.setSource("DEMO");
+
+        CycloneObservation obsB4 = new CycloneObservation();
+        obsB4.setCyclone(biparjoy);
+        obsB4.setObservedAt(Instant.now().minus(12, ChronoUnit.HOURS));
+        obsB4.setLatitude(18.2);
+        obsB4.setLongitude(67.3);
+        obsB4.setWindSpeedKph(160.0);
+        obsB4.setPressureHpa(958.0);
+        obsB4.setSource("DEMO");
+
+        CycloneObservation obsB5 = new CycloneObservation();
+        obsB5.setCyclone(biparjoy);
+        obsB5.setObservedAt(Instant.now());
+        obsB5.setLatitude(19.4);
+        obsB5.setLongitude(67.8);
+        obsB5.setWindSpeedKph(165.0);
+        obsB5.setPressureHpa(954.0);
+        obsB5.setMovementDirectionDegrees(340.0);
+        obsB5.setMovementSpeedKph(14.0);
+        obsB5.setSource("DEMO");
+
+        observationRepository.saveAll(List.of(obsB1, obsB2, obsB3, obsB4, obsB5));
 
         // Seed Active Cyclone Amphan
-        Cyclone amphan = Cyclone.builder()
-                .id("cyclone-amphan-2020")
-                .name("Cyclone Amphan")
-                .basin("Bay of Bengal")
-                .seasonYear(2020)
-                .status("ACTIVE")
-                .createdAt(LocalDateTime.now().minusDays(3))
-                .build();
+        Cyclone amphan = new Cyclone();
+        amphan.setName("Cyclone Amphan");
+        amphan.setBasin("Bay of Bengal");
+        amphan.setStatus("ACTIVE");
         cycloneRepository.save(amphan);
 
-        List<CycloneObservation> amphanObs = List.of(
-                CycloneObservation.builder().id("obs-a-1").cyclone(amphan).observedAt(LocalDateTime.now().minusHours(36)).lat(13.0).longCoord(86.2).windSpeedKmh(110.0).pressureHpa(982.0).intensityCategory("Severe Cyclonic Storm").build(),
-                CycloneObservation.builder().id("obs-a-2").cyclone(amphan).observedAt(LocalDateTime.now().minusHours(24)).lat(14.5).longCoord(86.3).windSpeedKmh(160.0).pressureHpa(955.0).intensityCategory("Very Severe Cyclonic Storm").build(),
-                CycloneObservation.builder().id("obs-a-3").cyclone(amphan).observedAt(LocalDateTime.now().minusHours(12)).lat(16.2).longCoord(86.5).windSpeedKmh(195.0).pressureHpa(930.0).intensityCategory("Extremely Severe Cyclonic Storm").build(),
-                CycloneObservation.builder().id("obs-a-4").cyclone(amphan).observedAt(LocalDateTime.now()).lat(18.2).longCoord(86.9).windSpeedKmh(215.0).pressureHpa(920.0).movementDirectionDeg(15.0).movementSpeedKmh(18.0).intensityCategory("Super Cyclonic Storm").build()
-        );
-        observationRepository.saveAll(amphanObs);
+        CycloneObservation obsA1 = new CycloneObservation();
+        obsA1.setCyclone(amphan);
+        obsA1.setObservedAt(Instant.now().minus(36, ChronoUnit.HOURS));
+        obsA1.setLatitude(13.0);
+        obsA1.setLongitude(86.2);
+        obsA1.setWindSpeedKph(110.0);
+        obsA1.setPressureHpa(982.0);
+        obsA1.setSource("DEMO");
+
+        CycloneObservation obsA2 = new CycloneObservation();
+        obsA2.setCyclone(amphan);
+        obsA2.setObservedAt(Instant.now().minus(24, ChronoUnit.HOURS));
+        obsA2.setLatitude(14.5);
+        obsA2.setLongitude(86.3);
+        obsA2.setWindSpeedKph(160.0);
+        obsA2.setPressureHpa(955.0);
+        obsA2.setSource("DEMO");
+
+        CycloneObservation obsA3 = new CycloneObservation();
+        obsA3.setCyclone(amphan);
+        obsA3.setObservedAt(Instant.now().minus(12, ChronoUnit.HOURS));
+        obsA3.setLatitude(16.2);
+        obsA3.setLongitude(86.5);
+        obsA3.setWindSpeedKph(195.0);
+        obsA3.setPressureHpa(930.0);
+        obsA3.setSource("DEMO");
+
+        CycloneObservation obsA4 = new CycloneObservation();
+        obsA4.setCyclone(amphan);
+        obsA4.setObservedAt(Instant.now());
+        obsA4.setLatitude(18.2);
+        obsA4.setLongitude(86.9);
+        obsA4.setWindSpeedKph(215.0);
+        obsA4.setPressureHpa(920.0);
+        obsA4.setMovementDirectionDegrees(15.0);
+        obsA4.setMovementSpeedKph(18.0);
+        obsA4.setSource("DEMO");
+
+        observationRepository.saveAll(List.of(obsA1, obsA2, obsA3, obsA4));
 
         // Seed Historical Cyclones
         historicalRepository.saveAll(List.of(
@@ -71,19 +138,19 @@ public class DemoDataSeeder implements CommandLineRunner {
 
         // Seed Alerts
         alertRepository.saveAll(List.of(
-                Alert.builder().id("alert-1").cycloneId(biparjoy.getId()).cycloneName("Cyclone Biparjoy").severity("Critical").message("High probability of severe landfall along Kutch coastline within 36-48 hours.").issuedAt(LocalDateTime.now()).affectedRegionsJson("[\"Kutch\", \"Dwarka\", \"Morbi\"]").build(),
-                Alert.builder().id("alert-2").cycloneId(amphan.getId()).cycloneName("Cyclone Amphan").severity("Warning").message("Extremely high sea surface temperatures driving rapid intensification.").issuedAt(LocalDateTime.now().minusHours(2)).affectedRegionsJson("[\"North 24 Parganas\", \"South 24 Parganas\"]").build()
+                Alert.builder().id("alert-1").cycloneId(biparjoy.getId().toString()).cycloneName("Cyclone Biparjoy").severity("Critical").message("High probability of severe landfall along Kutch coastline within 36-48 hours.").issuedAt(LocalDateTime.now()).affectedRegionsJson("[\"Kutch\", \"Dwarka\", \"Morbi\"]").build(),
+                Alert.builder().id("alert-2").cycloneId(amphan.getId().toString()).cycloneName("Cyclone Amphan").severity("Warning").message("Extremely high sea surface temperatures driving rapid intensification.").issuedAt(LocalDateTime.now().minusHours(2)).affectedRegionsJson("[\"North 24 Parganas\", \"South 24 Parganas\"]").build()
         ));
 
         // Seed Prediction
         Prediction pred = Prediction.builder()
                 .id("pred-biparjoy-1")
-                .cycloneId(biparjoy.getId())
+                .cycloneId(biparjoy.getId().toString())
                 .generatedAt(LocalDateTime.now())
                 .modelVersion("Kalman-XGBoost-v2.1")
                 .predictedIntensityTrend("INTENSIFY")
                 .confidenceScore(0.88)
-                .explanation("SST (>29.5°C) and low vertical wind shear in northern Arabian Sea support further intensification before potential landfall near Kutch.")
+                .explanation("SST (>29.5?C) and low vertical wind shear in northern Arabian Sea support further intensification before potential landfall near Kutch.")
                 .build();
 
         pred.setTrajectory(List.of(

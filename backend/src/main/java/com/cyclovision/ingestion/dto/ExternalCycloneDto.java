@@ -1,12 +1,15 @@
 package com.cyclovision.ingestion.dto;
 
 public class ExternalCycloneDto {
+    private String externalSource;
     private String externalId;
     private String name;
     private String basin;
     private String status;
     private String currentCategory;
 
+    public String getExternalSource() { return externalSource; }
+    public void setExternalSource(String externalSource) { this.externalSource = externalSource; }
     public String getExternalId() { return externalId; }
     public void setExternalId(String externalId) { this.externalId = externalId; }
     public String getName() { return name; }
