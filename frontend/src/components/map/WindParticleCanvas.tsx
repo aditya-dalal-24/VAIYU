@@ -1,148 +1,65 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from "react";
 
-interface WindParticleCanvasProps {
-  centerLat: number;
-  centerLong: number;
-  maxWindSpeedKmh: number;
-  isActive: boolean;
-}
-
-interface Particle {
-  x: number;
-  y: number;
-  age: number;
-  maxAge: number;
-  speed: number;
-}
-
-export const WindParticleCanvas: React.FC<WindParticleCanvasProps> = ({
-  centerLat,
-  centerLong,
-  maxWindSpeedKmh,
-  isActive
-}) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const animationFrameId = useRef<number | null>(null);
+export function WindParticleCanvas({ speed = 1 }: { speed?: number }) {
+  const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    if (!isActive) return;
-
-    const canvas = canvasRef.current;
+    const canvas = ref.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    let raf = 0;
 
-    // Resize canvas to parent container
-    const resizeCanvas = () => {
-      if (canvas.parentElement) {
-        canvas.width = canvas.parentElement.clientWidth;
-        canvas.height = canvas.parentElement.clientHeight;
-      }
+    const resize = () => {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
     };
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    resize();
+    window.addEventListener("resize", resize);
 
-    // Particle field properties
-    const PARTICLE_COUNT = 350;
-    const particles: Particle[] = [];
+    const particles = Array.from({ length: 420 }).map(() => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      a: Math.random() * Math.PI * 2,
+      life: Math.random() * 100,
+    }));
 
-    // Screen center mapping coordinates
-    const getScreenCenter = () => ({
-      cx: canvas.width / 2,
-      cy: canvas.height / 2
-    });
-
-    const createParticle = (): Particle => {
-      return {
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        age: 0,
-        maxAge: 40 + Math.random() * 60,
-        speed: 1 + Math.random() * 2
-      };
-    };
-
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-      particles.push(createParticle());
-    }
-
-    // Color gradient based on wind speed intensity (earth.nullschool style)
-    const getWindColor = (speedRatio: number) => {
-      if (speedRatio < 0.25) return 'rgba(56, 189, 248, 0.8)'; // Cyan
-      if (speedRatio < 0.5) return 'rgba(52, 211, 153, 0.85)'; // Emerald
-      if (speedRatio < 0.75) return 'rgba(251, 191, 36, 0.9)'; // Amber
-      if (speedRatio < 0.9) return 'rgba(248, 113, 113, 0.95)'; // Rose Red
-      return 'rgba(192, 132, 252, 1)'; // Electric Purple (Eye/Core)
-    };
-
-    const render = () => {
-      // Create trailing fading stream effect
-      ctx.fillStyle = 'rgba(11, 15, 25, 0.12)';
+    const tick = () => {
+      ctx.fillStyle = "rgba(20,14,10,0.10)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      const { cx, cy } = getScreenCenter();
-      const scale = Math.min(canvas.width, canvas.height) / 4;
-
-      particles.forEach((p, idx) => {
-        // Calculate vector field relative to cyclone center (counter-clockwise vortex in NH)
+      ctx.strokeStyle = "rgba(236,198,150,0.55)";
+      ctx.lineWidth = 0.8;
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      for (const p of particles) {
         const dx = p.x - cx;
         const dy = p.y - cy;
-        const dist = Math.sqrt(dx * dx + dy * dy) + 0.001;
-        const angle = Math.atan2(dy, dx);
-
-        // Counter-clockwise swirl angle + inward spiral component
-        const swirlAngle = angle - Math.PI / 2 + 0.25; 
-        
-        // Intensity decreases with distance from eyewall
-        const normalizedDist = dist / scale;
-        const intensity = Math.exp(-normalizedDist * 0.8) * (maxWindSpeedKmh / 180);
-        
-        // Velocity vector components (u, v)
-        const u = Math.cos(swirlAngle) * (2.5 + intensity * 3);
-        const v = Math.sin(swirlAngle) * (2.5 + intensity * 3);
-
-        const nextX = p.x + u * p.speed;
-        const nextY = p.y + v * p.speed;
-
-        // Draw particle vector line segment
+        const d = Math.max(30, Math.hypot(dx, dy));
+        const swirl = Math.atan2(dy, dx) + Math.PI / 2 + 0.35;
+        const v = (2.2 * speed * 260) / d;
+        const nx = p.x + Math.cos(swirl) * v;
+        const ny = p.y + Math.sin(swirl) * v;
         ctx.beginPath();
         ctx.moveTo(p.x, p.y);
-        ctx.lineTo(nextX, nextY);
-        ctx.strokeStyle = getWindColor(Math.min(1, intensity * 0.8 + 0.2));
-        ctx.lineWidth = 1.6;
-        ctx.lineCap = 'round';
+        ctx.lineTo(nx, ny);
         ctx.stroke();
-
-        // Advance particle position
-        p.x = nextX;
-        p.y = nextY;
-        p.age++;
-
-        // Reset out-of-bounds or aged particles
-        if (p.age > p.maxAge || p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) {
-          particles[idx] = createParticle();
+        p.x = nx;
+        p.y = ny;
+        p.life -= 1;
+        if (p.life < 0 || p.x < 0 || p.y < 0 || p.x > canvas.width || p.y > canvas.height) {
+          p.x = Math.random() * canvas.width;
+          p.y = Math.random() * canvas.height;
+          p.life = 60 + Math.random() * 80;
         }
-      });
-
-      animationFrameId.current = requestAnimationFrame(render);
-    };
-
-    render();
-
-    return () => {
-      window.removeEventListener('resize', resizeCanvas);
-      if (animationFrameId.current) {
-        cancelAnimationFrame(animationFrameId.current);
       }
+      raf = requestAnimationFrame(tick);
     };
-  }, [centerLat, centerLong, maxWindSpeedKmh, isActive]);
+    tick();
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", resize);
+    };
+  }, [speed]);
 
-  if (!isActive) return null;
-
-  return (
-    <canvas
-      ref={canvasRef}
-      className="absolute inset-0 pointer-events-none z-10 opacity-90"
-    />
-  );
-};
+  return <canvas ref={ref} className="pointer-events-none absolute inset-0 z-[400] h-full w-full opacity-60" />;
+}
