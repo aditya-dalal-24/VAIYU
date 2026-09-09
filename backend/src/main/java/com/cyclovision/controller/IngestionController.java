@@ -19,8 +19,11 @@ public class IngestionController {
     }
 
     @PostMapping("/trigger")
-    public ResponseEntity<Map<String, String>> triggerIngestion() {
+    public ResponseEntity<Map<String, Object>> triggerIngestion() {
         ingestionService.runIngestion();
-        return ResponseEntity.ok(Map.of("status", "success", "message", "Ingestion completed successfully"));
+        return ResponseEntity.ok(Map.of(
+            "success", true,
+            "message", "Cyclone ingestion completed successfully"
+        ));
     }
 }

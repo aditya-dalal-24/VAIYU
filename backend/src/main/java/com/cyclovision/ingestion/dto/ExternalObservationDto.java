@@ -11,6 +11,7 @@ public class ExternalObservationDto {
     private Double pressureHpa;
     private Double movementSpeedKph;
     private Double movementDirectionDegrees;
+    private String source;
     private String sourceRecordId;
 
     public String getExternalCycloneId() { return externalCycloneId; }
@@ -29,6 +30,8 @@ public class ExternalObservationDto {
     public void setMovementSpeedKph(Double movementSpeedKph) { this.movementSpeedKph = movementSpeedKph; }
     public Double getMovementDirectionDegrees() { return movementDirectionDegrees; }
     public void setMovementDirectionDegrees(Double movementDirectionDegrees) { this.movementDirectionDegrees = movementDirectionDegrees; }
+    public String getSource() { return source; }
+    public void setSource(String source) { this.source = source; }
     public String getSourceRecordId() { return sourceRecordId; }
     public void setSourceRecordId(String sourceRecordId) { this.sourceRecordId = sourceRecordId; }
 }
