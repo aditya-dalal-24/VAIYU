@@ -182,19 +182,18 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="w-full h-full object-cover group-hover:scale-105 transition-transform"
             />
           </button>
-
           {/* NOTIFICATIONS DROPDOWN DRAWER */}
           {isNotificationsOpen && (
-            <div className="absolute top-14 right-0 w-80 sm:w-96 glass-panel rounded-2xl p-4 border border-gray-700/80 shadow-2xl z-50 space-y-3 bg-[#0F121A]/95 backdrop-blur-2xl">
-              <div className="flex items-center justify-between border-b border-gray-800 pb-3">
+            <div className="absolute top-14 right-0 w-80 sm:w-96 glass-panel rounded-2xl p-4 border border-[#3A4E5A] shadow-2xl z-50 space-y-3 bg-[#132C42]/95 backdrop-blur-2xl animate-popover">
+              <div className="flex items-center justify-between border-b border-[#3A4E5A] pb-3">
                 <div className="flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-emerald-400" />
-                  <h3 className="font-bold text-white text-sm">Disaster Advisories & Feeds</h3>
+                  <Bell className="w-4 h-4 text-[#3FC7EA]" />
+                  <h3 className="font-bold text-[#F5F8FA] text-sm">Disaster Advisories & Feeds</h3>
                 </div>
                 {hasUnread && (
                   <button 
                     onClick={handleMarkAllRead}
-                    className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                    className="text-[11px] font-semibold text-[#3FC7EA] hover:text-[#5A8AA3] flex items-center gap-1"
                   >
                     <Check className="w-3 h-3" /> Mark read
                   </button>
@@ -213,32 +212,32 @@ export const Navbar: React.FC<NavbarProps> = ({
                       }}
                       className={`p-3 rounded-xl border transition-all cursor-pointer ${
                         isRead 
-                          ? 'bg-gray-900/40 border-gray-800 text-gray-400 opacity-60' 
-                          : 'bg-gray-800/60 hover:bg-gray-800 border-gray-700 text-gray-200'
+                          ? 'bg-[#0B1B2B]/50 border-[#3A4E5A]/50 text-[#7C93A0] opacity-60' 
+                          : 'bg-[#1E3E58]/80 hover:bg-[#2C5872] border-[#3A4E5A] text-[#F5F8FA]'
                       }`}
                     >
                       <div className="flex justify-between items-center mb-1">
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded font-mono ${
-                          item.category === 'CRITICAL' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                          item.category === 'CRITICAL' ? 'bg-[#FF6B57]/20 text-[#FF6B57] border border-[#FF6B57]/30' : 'bg-[#3FC7EA]/20 text-[#3FC7EA] border border-[#3FC7EA]/30'
                         }`}>
                           {item.category}
                         </span>
-                        <span className="text-[10px] text-gray-400">{item.time}</span>
+                        <span className="text-[10px] text-[#7C93A0]">{item.time}</span>
                       </div>
-                      <h4 className="text-xs font-bold text-white mb-0.5">{item.title}</h4>
-                      <p className="text-[11px] text-gray-300 leading-snug">{item.desc}</p>
+                      <h4 className="text-xs font-bold text-[#F5F8FA] mb-0.5">{item.title}</h4>
+                      <p className="text-[11px] text-[#C7D4DD] leading-snug">{item.desc}</p>
                     </div>
                   );
                 })}
               </div>
 
-              <div className="pt-2 border-t border-gray-800 text-center">
+              <div className="pt-2 border-t border-[#3A4E5A] text-center">
                 <button 
                   onClick={() => {
                     setActiveTab('alerts');
                     setIsNotificationsOpen(false);
                   }}
-                  className="w-full py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-bold text-xs transition-all flex items-center justify-center gap-1.5"
+                  className="w-full py-1.5 rounded-lg bg-[#3FC7EA]/10 hover:bg-[#3FC7EA]/20 border border-[#3FC7EA]/30 text-[#3FC7EA] font-bold text-xs transition-all flex items-center justify-center gap-1.5"
                 >
                   <span>View All Regional Advisories</span>
                   <ExternalLink className="w-3 h-3" />
@@ -249,47 +248,47 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* USER PROFILE POPOVER */}
           {isProfileOpen && (
-            <div className="absolute top-14 right-0 w-80 glass-panel rounded-2xl p-4 border border-gray-700/80 shadow-2xl z-50 space-y-4 bg-[#0F121A]/95 backdrop-blur-2xl">
-              <div className="flex items-center gap-3 pb-3 border-b border-gray-800">
+            <div className="absolute top-14 right-0 w-80 glass-panel rounded-2xl p-4 border border-[#3A4E5A] shadow-2xl z-50 space-y-4 bg-[#132C42]/95 backdrop-blur-2xl animate-popover">
+              <div className="flex items-center gap-3 pb-3 border-b border-[#3A4E5A]">
                 <img
                   src={user?.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80"}
                   alt={user?.name || "Operator Avatar"}
-                  className="w-12 h-12 rounded-full object-cover border border-emerald-500/40"
+                  className="w-12 h-12 rounded-full object-cover border border-[#3FC7EA]"
                 />
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-white text-sm truncate">{user?.name || "Dr. Alkesh Sharma"}</h3>
-                  <p className="text-[11px] text-emerald-400 font-mono font-medium truncate">{user?.title || "Lead Meteorological Officer"}</p>
-                  <span className="text-[10px] text-gray-400 truncate block">{user?.organization || "IMD Earth Command Hub"}</span>
+                  <h3 className="font-bold text-[#F5F8FA] text-sm truncate">{user?.name || "Dr. Alkesh Sharma"}</h3>
+                  <p className="text-[11px] text-[#3FC7EA] font-mono font-medium truncate">{user?.title || "Lead Meteorological Officer"}</p>
+                  <span className="text-[10px] text-[#7C93A0] truncate block">{user?.organization || "IMD Earth Command Hub"}</span>
                 </div>
               </div>
 
               <div className="space-y-2 text-xs">
-                <div className="flex justify-between items-center p-2 rounded-lg bg-gray-900/60 border border-gray-800">
-                  <div className="flex items-center gap-2 text-gray-300">
-                    <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                <div className="flex justify-between items-center p-2 rounded-lg bg-[#0B1B2B]/70 border border-[#3A4E5A]">
+                  <div className="flex items-center gap-2 text-[#C7D4DD]">
+                    <Activity className="w-3.5 h-3.5 text-[#3FC7EA]" />
                     <span>Pipeline Uptime</span>
                   </div>
-                  <span className="font-mono text-emerald-400 font-bold">99.8%</span>
+                  <span className="font-mono text-[#3FC7EA] font-bold">99.8%</span>
                 </div>
 
-                <div className="flex justify-between items-center p-2 rounded-lg bg-gray-900/60 border border-gray-800">
-                  <div className="flex items-center gap-2 text-gray-300">
-                    <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+                <div className="flex justify-between items-center p-2 rounded-lg bg-[#0B1B2B]/70 border border-[#3A4E5A]">
+                  <div className="flex items-center gap-2 text-[#C7D4DD]">
+                    <Cpu className="w-3.5 h-3.5 text-[#5A8AA3]" />
                     <span>OAuth Session</span>
                   </div>
-                  <span className="font-mono text-indigo-300 font-bold uppercase">{user?.authProvider || 'IMD_SSO'}</span>
+                  <span className="font-mono text-[#C7D4DD] font-bold uppercase">{user?.authProvider || 'IMD_SSO'}</span>
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-gray-800 space-y-2">
+              <div className="pt-2 border-t border-[#3A4E5A] space-y-2">
                 <button 
                   onClick={() => {
                     setIsOAuthModalOpen(true);
                     setIsProfileOpen(false);
                   }}
-                  className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2"
+                  className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-[#3FC7EA] to-[#2C5872] hover:from-[#3FC7EA] hover:to-[#1E3E58] text-[#0B1B2B] font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-2"
                 >
-                  <KeyRound className="w-3.5 h-3.5" />
+                  <KeyRound className="w-3.5 h-3.5 text-[#0B1B2B]" />
                   <span>Switch Account / OAuth SSO</span>
                 </button>
 
@@ -299,22 +298,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                       alert('Operational Diagnostics Log exported cleanly to session artifacts.');
                       setIsProfileOpen(false);
                     }}
-                    className="flex-1 py-1.5 px-2 rounded-lg text-[11px] font-semibold text-gray-300 hover:bg-gray-800 hover:text-white border border-gray-800 transition-all flex items-center justify-center gap-1"
+                    className="flex-1 py-1.5 px-2 rounded-lg bg-[#1E3E58] hover:bg-[#2C5872] border border-[#3A4E5A] text-[#C7D4DD] hover:text-[#F5F8FA] text-[11px] font-semibold transition-all"
                   >
-                    <span>Export Logs</span>
-                    <ExternalLink className="w-3 h-3 text-gray-500" />
+                    System Log
                   </button>
-
                   <button 
                     onClick={() => {
                       logout();
-                      setIsOAuthModalOpen(true);
                       setIsProfileOpen(false);
                     }}
-                    className="py-1.5 px-3 rounded-lg text-[11px] font-semibold text-red-400 hover:bg-red-500/10 border border-red-500/20 transition-all flex items-center gap-1"
+                    className="py-1.5 px-3 rounded-lg bg-[#FF6B57]/10 hover:bg-[#FF6B57]/20 border border-[#FF6B57]/30 text-[#FF6B57] text-[11px] font-semibold transition-all flex items-center gap-1"
                   >
                     <LogOut className="w-3 h-3" />
-                    <span>Sign Out</span>
+                    Logout
                   </button>
                 </div>
               </div>

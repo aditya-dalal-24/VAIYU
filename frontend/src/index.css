@@ -6,6 +6,9 @@
 
 :root {
   color-scheme: dark;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 body {
@@ -21,6 +24,32 @@ body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
   min-height: 100vh;
+}
+
+/* Micro-interaction polish: scale press feedback for buttons (Emil Design Engineering) */
+button, .interactive-btn {
+  transition: transform 150ms var(--ease-out), background-color 150ms var(--ease-out), border-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
+}
+
+button:active:not(:disabled), .interactive-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Popover & Tooltip Scale-In Animation */
+@keyframes popoverScaleIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-popover {
+  animation: popoverScaleIn 160ms var(--ease-out) forwards;
+  transform-origin: var(--transform-origin, top right);
 }
 
 /* Futuristic Cybernetic Background Grid Overlay */
@@ -71,7 +100,7 @@ body {
   box-shadow: 
     0 20px 50px rgba(7, 17, 28, 0.8),
     inset 0 1px 0 rgba(245, 248, 250, 0.08);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 200ms var(--ease-out), background 200ms var(--ease-out), border-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
 }
 
 .solis-card:hover {
@@ -86,6 +115,7 @@ body {
   background: rgba(19, 44, 66, 0.85);
   border: 1px solid #3A4E5A;
   border-radius: 20px;
+  transition: border-color 150ms var(--ease-out), background-color 150ms var(--ease-out);
 }
 
 .glass-panel {
@@ -101,12 +131,14 @@ body {
   color: #0B1B2B;
   font-weight: 700;
   box-shadow: 0 4px 16px rgba(63, 199, 234, 0.4);
+  transition: transform 150ms var(--ease-out), background-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
 }
 
 .solis-pill-inactive {
   background: rgba(30, 62, 88, 0.50);
   color: #C7D4DD;
   border: 1px solid #3A4E5A;
+  transition: transform 150ms var(--ease-out), background-color 150ms var(--ease-out), border-color 150ms var(--ease-out), color 150ms var(--ease-out);
 }
 
 .solis-pill-inactive:hover {
@@ -151,3 +183,4 @@ body {
     transparent 8px
   );
 }
+

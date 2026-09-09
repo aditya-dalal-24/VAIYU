@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Lock, X, CheckCircle2, ArrowRight, KeyRound, Globe } from 'lucide-react';
+import { Shield, Lock, X, CheckCircle2, ArrowRight, Globe } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 interface OAuthLoginModalProps {
@@ -25,42 +25,42 @@ export const OAuthLoginModal: React.FC<OAuthLoginModalProps> = ({ isOpen, onClos
   };
 
   return (
-    <div className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
-      <div className="w-full max-w-md solis-card p-6 border border-white/10 rounded-[28px] bg-[#0E1119]/95 shadow-2xl relative space-y-6">
+    <div className="fixed inset-0 z-[110] bg-[#0B1B2B]/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+      <div className="w-full max-w-md solis-card p-6 border border-[#3A4E5A] rounded-[28px] bg-[#132C42]/95 shadow-2xl relative space-y-6 animate-popover">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-1.5 rounded-full bg-gray-800/80 text-gray-400 hover:text-white hover:bg-gray-700 transition-all"
+          className="absolute top-5 right-5 p-1.5 rounded-full bg-[#1E3E58] text-[#C7D4DD] hover:text-[#F5F8FA] hover:bg-[#2C5872] border border-[#3A4E5A] transition-all"
         >
           <X className="w-4 h-4" />
         </button>
 
         {/* Modal Header */}
         <div className="text-center space-y-2 pt-2">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-indigo-600 mx-auto flex items-center justify-center shadow-xl shadow-emerald-500/20">
-            <Lock className="w-6 h-6 text-white" />
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#3FC7EA] to-[#2C5872] mx-auto flex items-center justify-center shadow-xl shadow-[#3FC7EA]/20">
+            <Lock className="w-6 h-6 text-[#0B1B2B]" />
           </div>
-          <h2 className="text-xl font-extrabold text-white tracking-tight">OAuth 2.0 Authentication</h2>
-          <p className="text-xs text-gray-400 max-w-xs mx-auto">
+          <h2 className="text-xl font-extrabold text-[#F5F8FA] tracking-tight">OAuth 2.0 Authentication</h2>
+          <p className="text-xs text-[#C7D4DD] max-w-xs mx-auto">
             Single Sign-On (SSO) Portal for CycloVision Emergency Operational Intelligence
           </p>
         </div>
 
         {/* Currently Authenticated Operator Badge */}
         {user && (
-          <div className="p-3 rounded-2xl bg-gray-900/60 border border-emerald-500/30 flex items-center gap-3">
+          <div className="p-3 rounded-2xl bg-[#0B1B2B]/80 border border-[#3FC7EA]/40 flex items-center gap-3">
             <img
               src={user.avatarUrl}
               alt={user.name}
-              className="w-10 h-10 rounded-full object-cover border border-emerald-400"
+              className="w-10 h-10 rounded-full object-cover border border-[#3FC7EA]"
             />
             <div className="flex-1 min-w-0">
-              <span className="text-xs font-bold text-white block truncate">{user.name}</span>
-              <span className="text-[11px] text-emerald-400 font-mono block truncate">
+              <span className="text-xs font-bold text-[#F5F8FA] block truncate">{user.name}</span>
+              <span className="text-[11px] text-[#3FC7EA] font-mono block truncate">
                 Active Provider: {user.authProvider.toUpperCase()}
               </span>
             </div>
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            <CheckCircle2 className="w-5 h-5 text-[#3FC7EA] shrink-0" />
           </div>
         )}
 
@@ -70,7 +70,7 @@ export const OAuthLoginModal: React.FC<OAuthLoginModalProps> = ({ isOpen, onClos
           <button
             onClick={() => handleProviderLogin('google')}
             disabled={!!authenticatingProvider}
-            className="w-full py-3 px-4 rounded-xl bg-white hover:bg-gray-100 text-gray-900 font-bold text-xs shadow-lg transition-all flex items-center justify-between group disabled:opacity-50"
+            className="w-full py-3 px-4 rounded-xl bg-[#F5F8FA] hover:bg-[#C7D4DD] text-[#0B1B2B] font-extrabold text-xs shadow-lg transition-all flex items-center justify-between group disabled:opacity-50"
           >
             <div className="flex items-center gap-3">
               <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -93,43 +93,42 @@ export const OAuthLoginModal: React.FC<OAuthLoginModalProps> = ({ isOpen, onClos
               </svg>
               <span>{authenticatingProvider === 'google' ? 'Authenticating with Google...' : 'Sign in with Google OAuth'}</span>
             </div>
-            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition-transform" />
+            <ArrowRight className="w-4 h-4 text-[#3A4E5A] group-hover:translate-x-1 transition-transform" />
           </button>
 
           {/* GitHub OAuth */}
           <button
             onClick={() => handleProviderLogin('github')}
             disabled={!!authenticatingProvider}
-            className="w-full py-3 px-4 rounded-xl bg-gray-900 hover:bg-gray-800 text-white font-bold text-xs border border-gray-700 shadow-lg transition-all flex items-center justify-between group disabled:opacity-50"
+            className="w-full py-3 px-4 rounded-xl bg-[#1E3E58] hover:bg-[#2C5872] text-[#F5F8FA] border border-[#3A4E5A] font-bold text-xs shadow-md transition-all flex items-center justify-between group disabled:opacity-50"
           >
             <div className="flex items-center gap-3">
-              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 fill-current text-[#F5F8FA]" viewBox="0 0 24 24">
                 <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
               </svg>
               <span>{authenticatingProvider === 'github' ? 'Authenticating with GitHub...' : 'Sign in with GitHub OAuth'}</span>
             </div>
-            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition-transform" />
+            <ArrowRight className="w-4 h-4 text-[#7C93A0] group-hover:translate-x-1 transition-transform" />
           </button>
 
           {/* IMD Enterprise SSO */}
           <button
             onClick={() => handleProviderLogin('imd_sso')}
             disabled={!!authenticatingProvider}
-            className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-between group disabled:opacity-50"
+            className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#3FC7EA] to-[#2C5872] hover:from-[#3FC7EA] hover:to-[#1E3E58] text-[#0B1B2B] font-extrabold text-xs shadow-lg transition-all flex items-center justify-between group disabled:opacity-50"
           >
             <div className="flex items-center gap-3">
-              <Globe className="w-4 h-4" />
-              <span>{authenticatingProvider === 'imd_sso' ? 'Connecting IMD Enterprise SSO...' : 'IMD Operational Enterprise SSO'}</span>
+              <Globe className="w-4 h-4 text-[#0B1B2B]" />
+              <span>{authenticatingProvider === 'imd_sso' ? 'Connecting to IMD Network...' : 'IMD Enterprise SSO Login'}</span>
             </div>
-            <KeyRound className="w-4 h-4 text-emerald-200 group-hover:translate-x-1 transition-transform" />
+            <Shield className="w-4 h-4 text-[#0B1B2B]" />
           </button>
         </div>
 
-        {/* Modal Footer */}
-        <div className="pt-2 border-t border-gray-800 text-center text-[11px] text-gray-400 space-y-1">
-          <p className="flex items-center justify-center gap-1">
-            <Shield className="w-3 h-3 text-emerald-400" />
-            <span>End-to-End Encrypted JWT Authentication</span>
+        {/* Footnote */}
+        <div className="pt-2 border-t border-[#3A4E5A] text-center">
+          <p className="text-[11px] text-[#7C93A0]">
+            Encrypted with TLS 1.3 & OAuth 2.0 PKCE Flow
           </p>
         </div>
       </div>
