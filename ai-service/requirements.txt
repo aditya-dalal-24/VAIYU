@@ -5,6 +5,10 @@ pydantic>=2.6.0
 
 # Models and training
 torch>=2.0.0
+# The satellite model is a torchvision ResNet-18 and reads frames with Pillow.
+# torchvision must match the torch build; on CUDA install both from the same index.
+torchvision>=0.15.0
+pillow>=10.0.0
 numpy>=1.26.0
 pandas>=2.2.0
 scikit-learn>=1.4.0

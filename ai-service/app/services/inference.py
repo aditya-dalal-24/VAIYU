@@ -146,6 +146,33 @@ def _recorded_confidence(entry: LoadedModel, key: str) -> Optional[float]:
         return None
 
 
+def _recorded_horizon_error(entry: LoadedModel, horizon: int) -> Optional[float]:
+    """The model's measured mean position error at one horizon, in km.
+
+    This is what the map's forecast cone is drawn from, so it must be a
+    measurement rather than a plausible-looking number. It comes from the
+    held-out evaluation stored in the checkpoint; a model whose evaluation
+    recorded nothing reports no radius at all, and the client draws no cone,
+    which is the honest outcome.
+    """
+    metrics = (entry.checkpoint.metrics or {}) if entry.checkpoint else {}
+    per_horizon = metrics.get("per_horizon")
+    if not isinstance(per_horizon, dict):
+        return None
+
+    row = per_horizon.get(f"{int(horizon)}h")
+    if not isinstance(row, dict):
+        return None
+
+    value = row.get("mean_error_km")
+    try:
+        error = float(value)
+    except (TypeError, ValueError):
+        return None
+
+    return round(error, 1) if error >= 0 else None
+
+
 def run_trajectory(
     entry: LoadedModel, current: Observation, steps, mask, environment
 ) -> TrajectoryPrediction:
@@ -173,6 +200,7 @@ def run_trajectory(
                 longitude=round(
                     normalise_longitude(current.longitude + float(delta_lon)), 3
                 ),
+                uncertainty_radius_km=_recorded_horizon_error(entry, horizon),
             )
         )
 

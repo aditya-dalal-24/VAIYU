@@ -335,3 +335,153 @@ class TestPartialAnalysis:
             "FAILED",
             "VALIDATION_ERROR",
         }
+
+
+class TestErrorRequestIdEcho:
+    """Section 13 puts requestId in the error body.
+
+    A client correlating a failure needs it most when the request was rejected,
+    so it is echoed on a 400 too -- but only when the payload genuinely carried
+    one, never invented.
+    """
+
+    def test_a_rejected_request_echoes_its_request_id(self, client):
+        response = client.post(
+            "/api/v1/analysis/cyclone", json={"requestId": "corr-123"}
+        )
+
+        assert response.status_code == 400
+        assert response.json()["requestId"] == "corr-123"
+
+    def test_no_request_id_is_invented_when_none_was_sent(self, client):
+        response = client.post("/api/v1/analysis/cyclone", json={})
+
+        assert response.status_code == 400
+        assert "requestId" not in response.json()
+
+    def test_a_non_string_request_id_is_not_echoed(self, client):
+        response = client.post(
+            "/api/v1/analysis/cyclone", json={"requestId": {"nested": "object"}}
+        )
+
+        assert response.status_code == 400
+        assert "requestId" not in response.json()
+
+    def test_the_error_shape_still_matches_section_13(self, client):
+        body = client.post(
+            "/api/v1/analysis/cyclone", json={"requestId": "corr-9"}
+        ).json()
+
+        assert set(body) >= {"timestamp", "status", "errorCode", "message"}
+        assert body["status"] == "VALIDATION_ERROR"
+
+    def test_a_rejected_request_leaks_no_internals(self, client):
+        blob = client.post(
+            "/api/v1/analysis/cyclone", json={"requestId": "corr-9"}
+        ).text.lower()
+
+        for leak in ("traceback", "site-packages", ".venv", "d:\\", "/users/"):
+            assert leak not in blob
+
+
+class TestUncertaintyRadiusProvenance:
+    """The forecast cone must be a measurement, not a plausible number.
+
+    The Spring client draws the map's uncertainty cone from
+    uncertaintyRadiusKm, so a fabricated value would put a confident-looking
+    circle on a map on no evidence. It comes from the held-out evaluation in
+    the checkpoint, and is absent when no evaluation recorded one.
+    """
+
+    def _checkpoint(self, directory, metrics):
+        generator = np.random.default_rng(0)
+        sequences = generator.normal(size=(20, 8, STEP_FEATURE_COUNT)).astype(
+            np.float32
+        )
+        masks = np.ones((20, 8), dtype=np.float32)
+        environments = generator.normal(
+            size=(20, ENVIRONMENTAL_FEATURE_COUNT)
+        ).astype(np.float32)
+
+        save_checkpoint(
+            path=checkpoint_path(directory, "trajectory"),
+            model=TrajectoryModel(
+                step_features=STEP_FEATURE_COUNT,
+                environment_features=ENVIRONMENTAL_FEATURE_COUNT,
+                horizons=HORIZONS,
+            ),
+            scaler=SequenceScaler().fit(sequences, masks, environments),
+            model_name="trajectory-model-v1",
+            model_version="1.0",
+            horizons=HORIZONS,
+            metrics=metrics,
+        )
+        reset_registry(directory)
+
+    def test_radius_is_the_recorded_mean_error_for_that_horizon(
+        self, client, temporary_checkpoint_dir, analysis_request_body
+    ):
+        self._checkpoint(
+            temporary_checkpoint_dir,
+            {
+                "validation_skill": 0.5,
+                "per_horizon": {
+                    "6h": {"mean_error_km": 28.15},
+                    "12h": {"mean_error_km": 61.17},
+                    "24h": {"mean_error_km": 144.73},
+                },
+            },
+        )
+        positions = client.post(ANALYSIS_URL, json=analysis_request_body()).json()[
+            "trajectoryPrediction"
+        ]["predictedPositions"]
+
+        radii = {p["forecastHours"]: p["uncertaintyRadiusKm"] for p in positions}
+        assert radii == {6: 28.1, 12: 61.2, 24: 144.7}
+        reset_registry()
+
+    def test_no_radius_when_the_evaluation_recorded_none(
+        self, client, temporary_checkpoint_dir, analysis_request_body
+    ):
+        """Absent, not zero. A zero radius would draw a cone claiming perfect
+        accuracy."""
+        self._checkpoint(temporary_checkpoint_dir, {"validation_skill": 0.5})
+        positions = client.post(ANALYSIS_URL, json=analysis_request_body()).json()[
+            "trajectoryPrediction"
+        ]["predictedPositions"]
+
+        assert all("uncertaintyRadiusKm" not in p for p in positions)
+        reset_registry()
+
+    def test_a_malformed_metrics_block_yields_no_radius(
+        self, client, temporary_checkpoint_dir, analysis_request_body
+    ):
+        self._checkpoint(
+            temporary_checkpoint_dir,
+            {"validation_skill": 0.5, "per_horizon": {"6h": {"mean_error_km": "n/a"}}},
+        )
+        positions = client.post(ANALYSIS_URL, json=analysis_request_body()).json()[
+            "trajectoryPrediction"
+        ]["predictedPositions"]
+
+        assert all("uncertaintyRadiusKm" not in p for p in positions)
+        reset_registry()
+
+    def test_a_horizon_missing_from_metrics_gets_no_radius(
+        self, client, temporary_checkpoint_dir, analysis_request_body
+    ):
+        self._checkpoint(
+            temporary_checkpoint_dir,
+            {
+                "validation_skill": 0.5,
+                "per_horizon": {"6h": {"mean_error_km": 28.15}},
+            },
+        )
+        positions = client.post(ANALYSIS_URL, json=analysis_request_body()).json()[
+            "trajectoryPrediction"
+        ]["predictedPositions"]
+
+        radii = {p["forecastHours"]: p.get("uncertaintyRadiusKm") for p in positions}
+        assert radii[6] == 28.1
+        assert radii[12] is None and radii[24] is None
+        reset_registry()

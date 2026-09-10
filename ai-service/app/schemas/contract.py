@@ -180,6 +180,11 @@ class PredictedPosition(ContractModel):
     timestamp: datetime
     latitude: float
     longitude: float
+    # Section 9 allows an uncertainty radius as an extension, and the Spring
+    # client draws the map's forecast cone from it. It carries the model's own
+    # held-out mean error at this horizon -- a measurement, never a guess -- and
+    # stays absent when no evaluation recorded one.
+    uncertainty_radius_km: Optional[float] = Field(default=None, ge=0)
 
 
 class TrajectoryPrediction(AnalysisBlock):
@@ -208,6 +213,11 @@ class SimilarCyclone(ContractModel):
     similarity_score: float
     rank: int
     similarity_basis: List[str] = Field(default_factory=list)
+    # Optional labels from a model index. Section 11 keeps the application
+    # database authoritative for the historical record, so these are a
+    # convenience for display and are omitted when the index has no name.
+    historical_cyclone_name: Optional[str] = None
+    season: Optional[int] = None
 
 
 class HistoricalSimilarity(AnalysisBlock):

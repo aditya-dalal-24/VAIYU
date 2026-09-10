@@ -303,6 +303,27 @@ The split is **hash-based, not shuffled**, so a storm keeps its assignment as
 the archive grows. Without that, retraining on more data silently moves storms
 between train and test and makes runs incomparable.
 
+**Future data hidden inside the dataset itself.** The two defences above both
+assume every row is an observation made at its own timestamp. IBTrACS breaks
+that: it resamples every track to three-hourly, and the 03/09/15/21Z rows are
+interpolated *between* reported fixes, so a 03Z row is partly computed from the
+06Z fix. A sample whose forecast time is 03Z therefore carries three hours of
+the future in its own input -- slicing `observations[:index + 1]` cannot catch
+it, because the leak is inside a row that is correctly "at or before T".
+
+This was a real bug, found late, and it is recorded because of what it did.
+Kept in, interpolated rows were 42% of the training table. The model's own
+error barely changed when they were removed, but the reported margin over
+linear extrapolation roughly halved: extrapolating a short interpolated leg is a
+handicapped baseline, so the comparison had been flattering the model. Every
+number before the fix overstated the model's advantage. `prepare_ibtracs.py`
+and `preprocessing/ibtracs_live.py` now keep only 00/06/12/18Z fixes, from one
+shared constant, and tests pin both.
+
+The lesson generalises: before trusting a dataset's timestamps, check how its
+rows were produced. A resampled, gap-filled or smoothed table can leak without
+any code touching the future.
+
 `split_by_season` is the stricter option: train on earlier seasons, test on
 later ones. Prefer it when the dataset spans enough years to give each split a
 usable number of storms.
@@ -352,7 +373,7 @@ Installing torch for a GPU needs the CUDA build, which pip does not choose by
 default:
 
 ```bash
-pip install torch --index-url https://download.pytorch.org/whl/cu121
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 ```
 
 **Checkpoints are device-neutral.** The model is moved back to CPU before
@@ -458,10 +479,10 @@ to notice.
 One storm is an anecdote. Read the output as an end-to-end check of the deployed
 path, never as a measure of forecast skill. Two runs show why that caveat is not
 boilerplate. On ep142026, a storm tracking WNW in a near-straight line, linear
-extrapolation beat the model (41 km mean against 58 km) -- straight-line motion
+extrapolation beat the model (59 km mean against 76 km) -- straight-line motion
 is precisely where extrapolation is unbeatable. On KROVANH, a recurving West
 Pacific storm reached only through the IBTrACS source, the model beat linear at
-every horizon (108 km mean against 165 km, and 218 km against 337 km at +24h).
+every horizon (105 km mean against 165 km; 221 km against 337 km at +24h).
 Curvature is what the model adds, and a single straight-moving storm cannot
 show it. The per-basin held-out figures in section 10d are the measurement;
 these are plumbing checks.
@@ -570,23 +591,36 @@ samples are reported as such rather than scored, because a mean error over a
 handful of samples invites conclusions the sample cannot support.
 
 Mean great-circle error per horizon, and the margin over linear extrapolation
-at +24h, from the current trajectory checkpoint (21,138 held-out samples across
-566 unseen cyclones):
+at +24h, from the current trajectory checkpoint -- trained and evaluated on
+synoptic fixes only (11,436 held-out samples across 559 unseen cyclones):
 
-| Basin | Cyclones | Samples | +6h | +12h | +24h | vs linear |
+| Basin | Cyclones | Samples | +6h | +12h | +24h | vs linear at +24h |
 | --- | --- | --- | --- | --- | --- | --- |
-| EP East/Central Pacific | 101 | 3,621 | 22 km | 48 km | 114 km | beats 44% |
-| NA North Atlantic | 124 | 4,168 | 30 km | 67 km | 165 km | beats 43% |
-| WP West Pacific | 188 | 6,795 | 29 km | 63 km | 148 km | beats 37% |
-| **NI North Indian** | **27** | **834** | **32 km** | **61 km** | **137 km** | **beats 32%** |
-| SI South Indian | 96 | 3,916 | 27 km | 58 km | 135 km | beats 30% |
-| SP South Pacific | 61 | 1,804 | 34 km | 72 km | 170 km | beats 27% |
+| EP East/Central Pacific | 101 | 1,693 | 22 km | 49 km | 117 km | beats by 10% |
+| NA North Atlantic | 118 | 1,904 | 30 km | 68 km | 164 km | beats by 20% |
+| WP West Pacific | 184 | 4,168 | 31 km | 65 km | 150 km | beats by 17% |
+| **NI North Indian** | **27** | **399** | **32 km** | **63 km** | **141 km** | **beats by 17%** |
+| SI South Indian | 96 | 2,198 | 27 km | 58 km | 133 km | beats by 16% |
+| SP South Pacific | 60 | 1,074 | 35 km | 74 km | 174 km | beats by 15% |
 
 The model beats linear extrapolation in every basin, including the North Indian
-Ocean, so its skill is not an artefact of the data-rich basins. NI is the
-thinnest slice — 27 held-out cyclones — so its figures carry the widest
-uncertainty of the six, and more North Indian training data is the single
+Ocean, by 10-20% at +24h. That is a real but modest margin, and it is the honest
+one: an earlier version of this table reported 27-44%, measured on a table that
+still contained IBTrACS' interpolated three-hourly rows (section 8). Those rows
+barely changed the model's own error but handicapped the linear baseline, so the
+margin roughly halved once they were removed. At +6h the model and linear
+extrapolation are close in the East Pacific (22 km against 23 km); the model's
+advantage grows with horizon, which is where curvature matters.
+
+NI is the thinnest slice -- 27 held-out cyclones -- so its figures carry the
+widest uncertainty of the six, and more North Indian training data is the single
 clearest improvement available.
+
+**Intensity**, on the same held-out cyclones: wind MAE 6.4 / 11.3 / 19.7 kph at
+6 / 12 / 24h against persistence's 8.3 / 15.8 / 28.6 (22-31% better); pressure
+MAE 2.5 / 4.4 / 7.8 hPa against 3.2 / 6.0 / 11.0. Trend classification reaches
+65.9% accuracy and 0.659 macro F1, against a 36.9% majority-class baseline, over
+a near-balanced three-way split.
 
 ---
 

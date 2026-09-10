@@ -20,6 +20,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from datetime import datetime, timezone  # noqa: E402
+from typing import Optional  # noqa: E402
 
 from fastapi import FastAPI, Request  # noqa: E402
 from fastapi.exceptions import RequestValidationError  # noqa: E402
@@ -59,7 +60,12 @@ app.include_router(health.router)
 app.include_router(analysis.router)
 
 
-def _error(status_code: int, error_code: str, message: str) -> JSONResponse:
+def _error(
+    status_code: int,
+    error_code: str,
+    message: str,
+    request_id: Optional[str] = None,
+) -> JSONResponse:
     """Contract section 13 error shape, with no internals leaked."""
     payload = ErrorResponse(
         timestamp=datetime.now(timezone.utc),
@@ -68,11 +74,28 @@ def _error(status_code: int, error_code: str, message: str) -> JSONResponse:
         else AnalysisStatus.FAILED,
         error_code=error_code,
         message=message,
+        request_id=request_id,
     )
     return JSONResponse(
         status_code=status_code,
         content=payload.model_dump(mode="json", by_alias=True, exclude_none=True),
     )
+
+
+def _requested_id(error: RequestValidationError) -> Optional[str]:
+    """Recover requestId from a payload that failed validation.
+
+    Section 13 puts requestId in the error body, and a client correlating a
+    failure needs it most when the request was rejected. It is echoed only when
+    it is genuinely a string in the body -- never invented, and never trusted
+    for anything but correlation.
+    """
+    body = getattr(error, "body", None)
+    if isinstance(body, dict):
+        candidate = body.get("requestId") or body.get("request_id")
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate[:200]
+    return None
 
 
 @app.exception_handler(RequestValidationError)
@@ -86,7 +109,7 @@ def handle_validation_error(request: Request, error: RequestValidationError):
     location = ".".join(str(part) for part in first.get("loc", ()) if part != "body")
     detail = first.get("msg", "Request failed validation.")
     message = f"{location}: {detail}" if location else detail
-    return _error(400, "INVALID_REQUEST", message)
+    return _error(400, "INVALID_REQUEST", message, _requested_id(error))
 
 
 @app.exception_handler(Exception)

@@ -18,6 +18,17 @@ as an error. Pressure is a central minimum rather than an average, so
 and disturbance stages are a different physical regime, and would teach the
 model motion it will never be asked to forecast.
 
+**Only synoptic fixes (00/06/12/18Z) are kept.** IBTrACS resamples every track
+to three-hourly, but the 03/09/15/21Z rows are interpolations *between* reported
+fixes -- a 03Z row is computed from the 06Z fix. A sample whose forecast time is
+03Z therefore carries three hours of the future in its own input, which section
+8 forbids. The effect is not cosmetic: kept in, those rows made 42% of the table,
+and they flattered the held-out comparison against linear extrapolation by
+roughly a factor of two, because extrapolating a short interpolated leg is a
+handicapped baseline. Operational feeds (ATCF, the IBTrACS active list after
+`preprocessing/ibtracs_live.py`) deliver 6-hourly fixes, so this also makes
+training match what the service is actually sent.
+
 Run from the ai-service directory:
 
     .venv/Scripts/python training/prepare_ibtracs.py \\
@@ -37,6 +48,7 @@ import pandas as pd
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from preprocessing.features import normalise_longitude  # noqa: E402
+from preprocessing.ibtracs_live import SYNOPTIC_HOURS  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +88,18 @@ def convert(input_path: str, basins=None) -> pd.DataFrame:
 
     frame = frame[frame["NATURE"] == TROPICAL_NATURE]
     logger.info("%d tropical-stage rows", len(frame))
+
+    # Interpolated rows read forward in time; see the module docstring. The
+    # same hours are used by the live adapter, so training and serving agree by
+    # construction.
+    stamps = pd.to_datetime(frame["ISO_TIME"], errors="coerce")
+    synoptic = stamps.dt.hour.isin(SYNOPTIC_HOURS) & (stamps.dt.minute == 0)
+    logger.info(
+        "%d synoptic rows kept; %d interpolated or off-hour rows dropped",
+        int(synoptic.sum()),
+        int((~synoptic).sum()),
+    )
+    frame = frame[synoptic]
 
     if basins:
         wanted = {basin.upper() for basin in basins}
