@@ -249,3 +249,93 @@ class TestScaler:
             original.transform_sequences(sequences, masks),
             restored.transform_sequences(sequences, masks),
         )
+
+
+class TestDegenerateFeatures:
+    """A feature that never varied in training must not explode at inference.
+
+    This is a regression test for a real failure. The IBTrACS observation table
+    carries no environmental columns, so every training sample saw the same
+    constant environmental vector. Its standard deviation was ~0, floored at
+    1e-6. When a request then supplied real environmental data -- which the
+    contract explicitly allows -- the scaler produced inputs in the millions and
+    the model returned latitudes in the hundreds of thousands.
+    """
+
+    def _constant_feature_scaler(self):
+        sequences = np.random.default_rng(0).normal(
+            size=(30, 8, STEP_FEATURE_COUNT)
+        ).astype(np.float32)
+        # One step feature held constant across the whole training set.
+        sequences[:, :, 4] = 100.0
+        masks = np.ones((30, 8), dtype=np.float32)
+        # Every environmental feature constant, as an archive without those
+        # columns produces.
+        environments = np.tile(
+            np.array([28.0, 0.0, 75.0, 0.0, 15.0, 0.0], dtype=np.float32), (30, 1)
+        )
+        return SequenceScaler().fit(sequences, masks, environments), sequences, masks
+
+    def test_constant_features_are_flagged(self):
+        scaler, _, _ = self._constant_feature_scaler()
+
+        assert scaler.step_degenerate[4] is True
+        assert all(scaler.environment_degenerate)
+
+    def test_unseen_environment_values_are_zeroed_not_amplified(self):
+        scaler, _, _ = self._constant_feature_scaler()
+
+        # Real environmental data, of the kind contract section 5 permits.
+        scaled = scaler.transform_environment(
+            np.array([[29.5, 1.0, 80.0, 1.0, 12.0, 1.0]], dtype=np.float32)
+        )
+
+        assert np.allclose(scaled, 0.0)
+        # The bug produced values around 1e6; this is the guard that matters.
+        assert np.abs(scaled).max() < 10.0
+
+    def test_constant_step_feature_is_zeroed(self):
+        scaler, sequences, masks = self._constant_feature_scaler()
+        probe = sequences.copy()
+        probe[:, :, 4] = 500.0  # far from the constant seen in training
+
+        scaled = scaler.transform_sequences(probe, masks)
+
+        assert np.allclose(scaled[:, :, 4], 0.0)
+
+    def test_varying_features_are_still_scaled_normally(self):
+        scaler, sequences, masks = self._constant_feature_scaler()
+
+        scaled = scaler.transform_sequences(sequences, masks)
+
+        # Feature 0 varied, so it must still carry signal.
+        assert not np.allclose(scaled[:, :, 0], 0.0)
+        assert np.abs(scaled[:, :, 0]).max() < 10.0
+
+    def test_flags_survive_a_checkpoint_round_trip(self):
+        scaler, _, _ = self._constant_feature_scaler()
+        restored = SequenceScaler.from_dict(scaler.to_dict())
+
+        assert restored.step_degenerate == scaler.step_degenerate
+        assert np.allclose(
+            restored.transform_environment(
+                np.array([[29.5, 1.0, 80.0, 1.0, 12.0, 1.0]], dtype=np.float32)
+            ),
+            0.0,
+        )
+
+    def test_older_checkpoints_are_corrected_on_load(self):
+        """A scaler saved before the flags existed is fixed, not left broken."""
+        scaler, _, _ = self._constant_feature_scaler()
+        payload = scaler.to_dict()
+        del payload["step_degenerate"]
+        del payload["environment_degenerate"]
+
+        restored = SequenceScaler.from_dict(payload)
+
+        assert np.allclose(
+            restored.transform_environment(
+                np.array([[29.5, 1.0, 80.0, 1.0, 12.0, 1.0]], dtype=np.float32)
+            ),
+            0.0,
+        )
