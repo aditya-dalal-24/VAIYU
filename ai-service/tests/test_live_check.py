@@ -175,3 +175,48 @@ class TestBaselines:
         )]
 
         assert baselines(stalled, hours=6.0)[1] is None
+
+
+class TestBasinBoundaries:
+    """Basin assignment for the per-basin held-out report.
+
+    A misassigned basin would silently move storms between rows and make the
+    North Indian Ocean figure -- the one that matters for this project -- wrong.
+    """
+
+    def test_north_indian_ocean(self):
+        from evaluation.basin_report import basin_of
+
+        assert basin_of(15.0, 88.0) == "NI"   # Bay of Bengal
+        assert basin_of(18.0, 68.0) == "NI"   # Arabian Sea
+
+    def test_south_indian_is_not_confused_with_north(self):
+        from evaluation.basin_report import basin_of
+
+        assert basin_of(-18.0, 58.0) == "SI"
+
+    def test_west_pacific_and_its_boundary_with_north_indian(self):
+        from evaluation.basin_report import basin_of
+
+        assert basin_of(23.0, 132.0) == "WP"
+        assert basin_of(10.0, 100.0) == "WP"   # 100E belongs to WP
+        assert basin_of(10.0, 99.9) == "NI"
+
+    def test_east_pacific_spans_the_dateline(self):
+        from evaluation.basin_report import basin_of
+
+        assert basin_of(15.0, -112.0) == "EP"
+        assert basin_of(15.0, -101.0) == "EP"
+        assert basin_of(15.0, -99.0) == "NA"   # east of 100W is Atlantic
+
+    def test_north_atlantic(self):
+        from evaluation.basin_report import basin_of
+
+        assert basin_of(25.0, -60.0) == "NA"
+
+    def test_every_position_lands_in_a_known_basin(self):
+        from evaluation.basin_report import BASIN_LABELS, basin_of
+
+        for latitude in range(-50, 55, 5):
+            for longitude in range(-180, 181, 10):
+                assert basin_of(latitude, longitude) in BASIN_LABELS

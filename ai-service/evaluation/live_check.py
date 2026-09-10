@@ -15,6 +15,15 @@ scoring a model on a storm it trained on produces excellent numbers that mean
 nothing -- a trap this tool exists partly because of.
 
     .venv/Scripts/python evaluation/live_check.py --storm ep142026 --hold-back 12
+
+Two sources, because no single one is both open and global. ``--source atcf``
+(the default) reads NHC's operational b-decks, which are near-real-time but
+cover al/cp/ep only. ``--source ibtracs`` reads the IBTrACS active list, which
+is global -- West Pacific, North Indian, South Indian, South Pacific -- but runs
+a day or two behind. ``--list`` shows what either currently has.
+
+    .venv/Scripts/python evaluation/live_check.py --source ibtracs --list
+    .venv/Scripts/python evaluation/live_check.py --source ibtracs --storm KROVANH
 """
 
 from __future__ import annotations
@@ -36,6 +45,11 @@ from preprocessing.atcf import (  # noqa: E402
     build_request,
     fetch_deck,
     training_overlap,
+)
+from preprocessing.ibtracs_live import (  # noqa: E402
+    basin_counts,
+    fetch_active_storms,
+    find_storm,
 )
 
 DEFAULT_SERVICE = "http://localhost:8000/api/v1/analysis/cyclone"
@@ -102,15 +116,51 @@ def baselines(history: Sequence[AtcfFix], hours: float):
     return persistence, linear
 
 
+def list_storms(args) -> int:
+    """Show what the chosen source currently carries."""
+    if args.source == "atcf":
+        print("  NHC b-decks cover al / cp / ep only. Browse them at")
+        print("  https://ftp.nhc.noaa.gov/atcf/btk/ and pass an id like ep142026.")
+        print("  For any other basin use --source ibtracs.")
+        return 0
+
+    try:
+        storms = fetch_active_storms(basins=args.basin)
+    except AtcfError as error:
+        print(f"  {error}")
+        return 1
+
+    if not storms:
+        print(
+            "  the IBTrACS active list currently has no storms with enough "
+            "synoptic fixes"
+        )
+        return 0
+
+    print(f"  {len(storms)} active storm(s): {basin_counts(storms)}")
+    for storm in storms:
+        print(f"    {storm.summary()}")
+    print()
+    print("  IBTrACS is an archive, not an operational feed -- expect it to run")
+    print("  a day or two behind. Pass a name or SID to --storm.")
+    return 0
+
+
 def main(args) -> int:
     try:
-        fixes = fetch_deck(args.storm)
+        if args.source == "ibtracs":
+            storm = find_storm(args.storm, basins=args.basin)
+            fixes = storm.fixes
+            label = f"{storm.name} ({storm.storm_id}, {storm.basin_name})"
+        else:
+            fixes = fetch_deck(args.storm)
+            label = args.storm
     except AtcfError as error:
         print(f"  {error}")
         return 1
 
     print(
-        f"  {args.storm}: {len(fixes)} fixes, "
+        f"  {label}: {len(fixes)} fixes, "
         f"{fixes[0].timestamp:%Y-%m-%d %HZ} to {fixes[-1].timestamp:%Y-%m-%d %HZ}"
     )
 
@@ -281,8 +331,30 @@ def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--storm",
-        required=True,
-        help="ATCF identifier, e.g. ep142026 (NHC) or io012026 (JTWC, when reachable)",
+        help=(
+            "with --source atcf, an ATCF id such as ep142026; with --source "
+            "ibtracs, a storm name or IBTrACS SID. Omit it with --list."
+        ),
+    )
+    parser.add_argument(
+        "--source",
+        choices=("atcf", "ibtracs"),
+        default="atcf",
+        help=(
+            "atcf: NHC b-decks, near-real-time, al/cp/ep only. "
+            "ibtracs: global active list, one to two days behind."
+        ),
+    )
+    parser.add_argument(
+        "--basin",
+        action="append",
+        help="restrict --source ibtracs to a basin code (NI, WP, SI, SP, ...)",
+    )
+    parser.add_argument(
+        "--list",
+        action="store_true",
+        dest="list_only",
+        help="list what the source currently carries, then exit",
     )
     parser.add_argument(
         "--hold-back",
@@ -301,4 +373,9 @@ def parse_args():
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(parse_args()))
+    arguments = parse_args()
+    if arguments.list_only:
+        raise SystemExit(list_storms(arguments))
+    if not arguments.storm:
+        raise SystemExit("  --storm is required unless --list is passed")
+    raise SystemExit(main(arguments))

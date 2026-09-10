@@ -423,7 +423,12 @@ scaling, checkpoint load, inference, response shape — against ground truth the
 model was never given.
 
 ```
+# NHC b-decks: near-real-time, al/cp/ep only
 .venv/Scripts/python evaluation/live_check.py --storm ep142026 --hold-back 12
+
+# IBTrACS active list: every basin, one to two days behind
+.venv/Scripts/python evaluation/live_check.py --source ibtracs --list
+.venv/Scripts/python evaluation/live_check.py --source ibtracs --storm KROVANH
 ```
 
 Two properties make it a test rather than a demonstration:
@@ -451,7 +456,15 @@ extrapolation wins, the tool says so explicitly rather than leaving the reader
 to notice.
 
 One storm is an anecdote. Read the output as an end-to-end check of the deployed
-path, never as a measure of forecast skill.
+path, never as a measure of forecast skill. Two runs show why that caveat is not
+boilerplate. On ep142026, a storm tracking WNW in a near-straight line, linear
+extrapolation beat the model (41 km mean against 58 km) -- straight-line motion
+is precisely where extrapolation is unbeatable. On KROVANH, a recurving West
+Pacific storm reached only through the IBTrACS source, the model beat linear at
+every horizon (108 km mean against 165 km, and 218 km against 337 km at +24h).
+Curvature is what the model adds, and a single straight-moving storm cannot
+show it. The per-basin held-out figures in section 10d are the measurement;
+these are plumbing checks.
 
 ---
 
@@ -462,17 +475,53 @@ centre publishes best tracks in. The format is identical across basins, so the
 parser serves whichever source is open. Availability verified from this
 environment:
 
-| Source | Coverage | Status |
-| --- | --- | --- |
-| `ftp.nhc.noaa.gov/atcf/btk/` | `al`, `cp`, `ep` | **Reachable**, no key |
-| JTWC (`metoc.navy.mil`) | `io`, `sh`, `wp` | 403 Forbidden |
-| IMD (`rsmcnewdelhi.imd.gov.in`) | North Indian Ocean | Unreachable |
-| MOSDAC (ISRO) | INSAT-3D, NIO cyclone products | Requires an account |
-| Bhuvan (ISRO Geoportal) | — | **No cyclone data** |
+| Source | Coverage | Latency | Status |
+| --- | --- | --- | --- |
+| `ftp.nhc.noaa.gov/atcf/btk/` | `al`, `cp`, `ep` | near-real-time | **Reachable**, no key |
+| **IBTrACS `ACTIVE` list** | **global, all basins** | **1-2 days behind** | **Reachable**, no key |
+| GDACS event GeoJSON | global, incl. Indian Ocean | near-real-time | Reachable, no key, **no pressure** |
+| ECMWF open data (`enfo-tf`) | global forecast tracks | 2x daily | Reachable, no key, BUFR |
+| JTWC (`metoc.navy.mil`) | `io`, `sh`, `wp` | - | 403 Forbidden |
+| IMD (`rsmcnewdelhi.imd.gov.in`) | North Indian Ocean | - | Unreachable |
+| MOSDAC (ISRO) | INSAT-3D, NIO products | - | Requires an account |
+| Bhuvan (ISRO Geoportal) | - | - | **No cyclone data** |
 
-**No North Indian Ocean live track source is currently open.** That is a data
-access problem, not a code one — the parser handles an `io`/`wp` b-deck the
-moment one can be fetched.
+The basin gap is closed by the IBTrACS active list, not by an operational
+centre. `preprocessing/ibtracs_live.py` reads it and covers every basin --
+West Pacific, North Indian, South Indian, South Pacific -- with no account and
+no key. The cost is latency: IBTrACS is a best-track archive rather than an
+operational feed, so it runs one to two days behind the b-decks. Use ATCF for
+`al`/`cp`/`ep`, this for everything else.
+
+Two filters in that module are correctness guards, not tidying. IBTrACS
+resamples tracks to three-hourly, but only 00/06/12/18Z are reported fixes: a
+03Z row's position and wind are interpolated *between* the 00Z and 06Z fixes, so
+a row stamped 03Z carries information from 06Z. Feeding those in as observations
+would leak three hours of the future into every sample, so only synoptic rows are
+kept. And `WMO_WIND` is empty in this file while `USA_WIND` is populated, which
+matches what `training/prepare_ibtracs.py` already uses -- so training and the
+live path agree by construction rather than by coincidence.
+
+### Sources examined and not adopted
+
+**GDACS** (EU Joint Research Centre) serves per-event GeoJSON with real track
+points for every basin, including the Indian Ocean, with no key. It carries no
+pressure at all and is 12-hourly rather than 6-hourly, so it cannot fill an
+observation history on its own; it is a reasonable cross-check on position and a
+fallback if IBTrACS latency ever matters more than pressure.
+
+**ECMWF open data** publishes a global tropical-cyclone track product
+(`<date>-360h-enfo-tf.bufr`, ~1.5 MB, no account). These are *forecast* tracks,
+so they must never be fed in as observation history -- a 360-hour forecast is
+future information by construction. Their honest use is as a comparison
+baseline: how does this model's +24h error compare with ECMWF's. That needs
+`eccodes` and `pdbufr` to decode BUFR, which is why it is recorded as an
+extension point rather than implemented.
+
+**MOSDAC** remains the highest-value unlock, being the only source found that
+carries INSAT-3D imagery and North Indian Ocean cyclone products together --
+the satellite model has an architecture but no imagery to train on. It requires
+an account held by the project owner.
 
 **Bhuvan** was checked directly and does not carry cyclone data at all: its API
 catalogue is postal/hospital lookup, village geocoding, LULC 50K/250K, shortest
@@ -499,6 +548,45 @@ That is a large plotting-and-analysis stack, and a 40 s startup, to duplicate a
 belongs in a separate data-prep requirements file, not in the service's
 `requirements.txt` — the service must stay deployable without a geospatial
 toolchain.
+
+---
+
+## 10d. Per-basin held-out skill
+
+A checkpoint records one skill number over the whole held-out split, which
+hides the question that matters for a given deployment: does the model predict
+*this* basin, or is its average carried by the basins with the most data? The
+North Indian Ocean is IBTrACS' smallest basin by a wide margin, so it is exactly
+where a global average could flatter a model that had learned little there.
+
+```
+.venv/Scripts/python evaluation/basin_report.py --basin NI
+```
+
+`evaluation/basin_report.py` rebuilds the split with the same config and seed
+used for training, so the cyclones it scores are the ones the model never saw.
+It retrains nothing and writes nothing. Basins with fewer than 200 held-out
+samples are reported as such rather than scored, because a mean error over a
+handful of samples invites conclusions the sample cannot support.
+
+Mean great-circle error per horizon, and the margin over linear extrapolation
+at +24h, from the current trajectory checkpoint (21,138 held-out samples across
+566 unseen cyclones):
+
+| Basin | Cyclones | Samples | +6h | +12h | +24h | vs linear |
+| --- | --- | --- | --- | --- | --- | --- |
+| EP East/Central Pacific | 101 | 3,621 | 22 km | 48 km | 114 km | beats 44% |
+| NA North Atlantic | 124 | 4,168 | 30 km | 67 km | 165 km | beats 43% |
+| WP West Pacific | 188 | 6,795 | 29 km | 63 km | 148 km | beats 37% |
+| **NI North Indian** | **27** | **834** | **32 km** | **61 km** | **137 km** | **beats 32%** |
+| SI South Indian | 96 | 3,916 | 27 km | 58 km | 135 km | beats 30% |
+| SP South Pacific | 61 | 1,804 | 34 km | 72 km | 170 km | beats 27% |
+
+The model beats linear extrapolation in every basin, including the North Indian
+Ocean, so its skill is not an artefact of the data-rich basins. NI is the
+thinnest slice — 27 held-out cyclones — so its figures carry the widest
+uncertainty of the six, and more North Indian training data is the single
+clearest improvement available.
 
 ---
 
