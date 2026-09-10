@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from dataclasses import replace
 import logging
 import os
 import sys
@@ -24,6 +25,7 @@ import torch
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from evaluation.trajectory_metrics import evaluate_trajectory  # noqa: E402
+from preprocessing.dataset import withhold_pressure  # noqa: E402
 from models.base import count_parameters  # noqa: E402
 from models.trajectory.model import (  # noqa: E402
     MODEL_NAME,
@@ -92,6 +94,21 @@ def main(config: TrainingConfig) -> None:
     if len(data.test) > 0:
         metrics = evaluate_trajectory(model, data.test, data.scaler, config.horizons)
         logger.info("held-out metrics:\n%s", json.dumps(metrics, indent=2))
+
+        # The same held-out storms with pressure withheld everywhere -- what a
+        # request without pressureHpa gets. Measured, so the service can state
+        # the cost of a missing pressure instead of implying there is none.
+        withheld = replace(
+            data.test,
+            sequences=withhold_pressure(data.test.sequences, data.test.masks),
+        )
+        metrics["pressure_withheld"] = evaluate_trajectory(
+            model, withheld, data.scaler, config.horizons
+        ).get("per_horizon", {})
+        logger.info(
+            "held-out with pressure withheld: %s",
+            {h: row.get("mean_error_km") for h, row in metrics["pressure_withheld"].items()},
+        )
     else:
         logger.warning("test split is empty; no held-out metrics were computed")
 

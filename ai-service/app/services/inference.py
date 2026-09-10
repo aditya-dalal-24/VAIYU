@@ -59,6 +59,16 @@ def _observation(payload) -> Observation:
     )
 
 
+MISSING_CURRENT_WIND_REASON = (
+    "The current observation must include windSpeedKph for a trajectory or "
+    "intensity forecast; the models were not trained on fixes without wind."
+)
+
+
+class MissingCurrentWind(Exception):
+    """The current fix has no wind, so no sequence forecast can be anchored."""
+
+
 def prepare_inputs(request: CycloneAnalysisRequest) -> Tuple[Observation, list, list, list]:
     """Build the model inputs for a request.
 
@@ -71,6 +81,14 @@ def prepare_inputs(request: CycloneAnalysisRequest) -> Tuple[Observation, list, 
     """
     current = _observation(request.current_observation)
     history = [_observation(item) for item in request.observation_history]
+
+    # Every forecast is anchored on the current fix, and the models were never
+    # trained on a fix without wind. Dropping it would silently move the
+    # forecast's base time, so the forecasts decline instead. This is not a 422:
+    # section 2's partial-analysis principle means other requested analyses,
+    # such as satellite, must still run.
+    if current.wind_speed_kph is None:
+        raise MissingCurrentWind(MISSING_CURRENT_WIND_REASON)
 
     combined = observations_up_to([*history, current], current.timestamp)
 
@@ -173,6 +191,31 @@ def _recorded_horizon_error(entry: LoadedModel, horizon: int) -> Optional[float]
     return round(error, 1) if error >= 0 else None
 
 
+def _pressure_note(entry: LoadedModel) -> str:
+    """Caller-facing note for a trajectory made without a central pressure.
+
+    States the measured cost where the checkpoint recorded one, rather than
+    implying a pressure-free forecast is as good as a normal one.
+    """
+    note = (
+        "No pressureHpa was supplied for the current observation; the forecast "
+        "was made without it."
+    )
+    metrics = (entry.checkpoint.metrics or {}) if entry.checkpoint else {}
+    withheld = metrics.get("pressure_withheld")
+    horizons = entry.checkpoint.horizons if entry.checkpoint else []
+    if isinstance(withheld, dict) and horizons:
+        longest = f"{int(max(horizons))}h"
+        row = withheld.get(longest) or {}
+        error = row.get("mean_error_km")
+        if isinstance(error, (int, float)):
+            note += (
+                f" Held-out mean position error without pressure at {longest}: "
+                f"{float(error):.0f} km."
+            )
+    return note
+
+
 def run_trajectory(
     entry: LoadedModel, current: Observation, steps, mask, environment
 ) -> TrajectoryPrediction:
@@ -206,6 +249,7 @@ def run_trajectory(
 
     return TrajectoryPrediction(
         status=AnalysisStatus.COMPLETED,
+        reason=_pressure_note(entry) if current.pressure_hpa is None else None,
         confidence=_recorded_confidence(entry, "validation_skill"),
         predicted_positions=positions,
         model=_model_info(entry, started),

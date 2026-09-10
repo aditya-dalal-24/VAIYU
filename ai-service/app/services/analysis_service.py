@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
-from typing import List
+from typing import Optional, List
 
 from app.schemas.contract import (
     AnalysisStatus,
@@ -29,7 +29,12 @@ from app.schemas.contract import (
     TrajectoryPrediction,
 )
 from app.services import extensions
-from app.services.inference import prepare_inputs, run_intensity, run_trajectory
+from app.services.inference import (
+    MissingCurrentWind,
+    prepare_inputs,
+    run_intensity,
+    run_trajectory,
+)
 from app.services.satellite_inference import run_satellite
 from preprocessing.features import InsufficientHistory
 from registry.registry import ModelRegistry, get_registry
@@ -66,12 +71,28 @@ def analyse(
     )
 
     current = steps = mask = environment = None
+    declined: Optional[str] = None
     if requested & SEQUENCE_ANALYSES:
-        # Deliberately not caught: a caller asking for a forecast without
-        # enough history gets 422, which section 14 reserves for exactly this.
-        current, steps, mask, environment = prepare_inputs(request)
+        # InsufficientHistory is deliberately not caught: a caller asking for a
+        # forecast without enough history gets 422, which section 14 reserves
+        # for exactly this. A missing current wind is narrower -- only the
+        # sequence forecasts decline, and everything else still runs.
+        try:
+            current, steps, mask, environment = prepare_inputs(request)
+        except MissingCurrentWind as reason:
+            declined = str(reason)
 
-    if AnalysisType.TRAJECTORY_PREDICTION in requested:
+    if declined is not None:
+        if AnalysisType.TRAJECTORY_PREDICTION in requested:
+            response.trajectory_prediction = TrajectoryPrediction(
+                status=AnalysisStatus.NOT_AVAILABLE, reason=declined
+            )
+        if AnalysisType.INTENSITY_PREDICTION in requested:
+            response.intensity_prediction = IntensityPrediction(
+                status=AnalysisStatus.NOT_AVAILABLE, reason=declined
+            )
+
+    if AnalysisType.TRAJECTORY_PREDICTION in requested and declined is None:
         try:
             response.trajectory_prediction = run_trajectory(
                 registry.trajectory, current, steps, mask, environment
@@ -82,7 +103,7 @@ def analyse(
                 status=AnalysisStatus.FAILED, reason=FAILURE_REASON
             )
 
-    if AnalysisType.INTENSITY_PREDICTION in requested:
+    if AnalysisType.INTENSITY_PREDICTION in requested and declined is None:
         try:
             response.intensity_prediction = run_intensity(
                 registry.intensity, current, steps, mask, environment

@@ -18,10 +18,10 @@ Companion documents, all in `ai-service/`:
 | `TRAJECTORY_PREDICTION` | Implemented, trained, verified | Yes, where checkpoints are present |
 | `INTENSITY_PREDICTION` | Implemented, trained, verified | Yes, where checkpoints are present |
 | `SATELLITE_ANALYSIS` | Pipeline and source handling implemented; **no imagery, no checkpoint** | No: returns `NOT_AVAILABLE` + reason |
-| `HISTORICAL_SIMILARITY` | Extension point only | No: returns `NOT_AVAILABLE` + reason |
+| `HISTORICAL_SIMILARITY` | Implemented: analogue ensemble, built and evaluated | Yes, where the index is present |
 | Explainability | Extension point only | No: `explanations: []` |
 
-- **Tests:** 262 passing (`python -m pytest`, 15 test files), on Python 3.11.9 and 3.13.2.
+- **Tests:** 305 passing (`python -m pytest`, 17 test files). The last full run under Python 3.11.9 was at 262 tests; the current count was run on 3.13.2 only.
 - **Contract check:** 46/46 passing against the live service (§9).
 - **Git:** the 8 AI commits listed in §3, plus handoff-doc commits, are all local and **not pushed**.
 
@@ -119,9 +119,10 @@ gitignored and **exist on the development laptop only**.
 | `data/processed/cyclone_metadata.csv`, `training_table.csv` | Local | Left over from earlier work; **no current code reads them**. |
 | **MOSDAC sample file** | Intended: `data/raw/mosdac/` | **Not downloaded yet**; the folder does not exist. Spec in §5. |
 | **MOSDAC ordered dataset** | — | **Not ordered.** The order list is generated only after the sample is verified (§10). |
-| Trajectory checkpoint | `checkpoints/trajectory.pt` (177 KB) | Trained 2026-09-10 08:10 UTC on the clean table. |
-| Intensity checkpoint | `checkpoints/intensity.pt` (214 KB) | Trained 2026-09-10 08:17 UTC on the clean table. |
-| Old checkpoints | `checkpoints/pre-synoptic/` | Backup of the models trained on leaky data. **Do not serve.** Safe to delete. |
+| Trajectory checkpoint | `checkpoints/trajectory.pt` (181 KB) | Feature set 1.1, trained 2026-09-10 10:04 UTC on the clean table. |
+| Intensity checkpoint | `checkpoints/intensity.pt` (217 KB) | Feature set 1.1, trained 2026-09-10 10:09 UTC. |
+| Analogue index | `checkpoints/analogue_index.npz` (6 MB) + `.json` | Built 2026-09-10 from the clean table: 69,984 windows from 3,675 storms. Rebuild with `training/build_analogue_index.py` (~11 min). |
+| Feature set 1.0 checkpoints | `checkpoints/fsv-1.0/` | Backup only. They **cannot load** under 1.1 code (`CHECKPOINT_INVALID`). Safe to delete. |
 | Satellite checkpoint | — | None. |
 
 **North Indian storms covered by INSAT imagery** (counted from our table):
@@ -148,6 +149,27 @@ gitignored and **exist on the development laptop only**.
    2013. There is no clean wind-shear product.
 3. **Possibly a live North Indian feed:** SCORPIO ("Sat. Based Cyclone Obser. and
    Realtime Pred. over IO").
+
+**Verified from MOSDAC's public catalogue (2026-09-10, no login needed to search):**
+- **Search endpoint:** `GET https://mosdac.gov.in/apios/datasets.json?datasetId=…&startTime=YYYY-MM-DD&endTime=…&count=≤100&startIndex=…`.
+  It's the one used by MOSDAC's official downloader `mdapi.py` (from
+  `https://www.mosdac.gov.in/software/mdapi.zip`, configured by `config.json`;
+  downloading needs credentials, and the quota is 5,000 files/day). The server
+  resets connections under rapid requests, so pace them.
+- **Chosen product: `3RIMG_L1C_ASIA_MER`** (INSAT-3DR Imager, 6 channels,
+  Mercator, Asia sector 44.5–110°E, 10°S–45.5°N). It's about 14 MB/file in
+  2023 and about 6.5 MB in 2018. The same day's alternatives: `3RIMG_L1C_SGP`
+  ~47 MB/file, `3RIMG_L1B_STD` ~290 MB/file (full disk). `3DIMG_*`
+  (INSAT-3D) had only 45 files that day. `3SIMG_*` (INSAT-3DS) has no 2023 data.
+- **Availability:** present on 2018-10-10, 2020-05-20, 2023-05-14 and
+  2024-05-26; **absent on 2016-10-01**. The exact start date is not yet found.
+  Files arrive every ~5 min (246–288 per day).
+- **Sample file identified:** `3RIMG_13MAY2023_2358_L1C_ASIA_MER_V01R00.h5`,
+  granule id **11621952**, 2 minutes before Mocha's 2023-05-14 00Z fix. The
+  user was given two routes: the browser link
+  `https://mosdac.gov.in/uops/?metaid=11621952` (untested behind login), or
+  `mdapi.py` with `gId: "11621952"`, saving to `data/raw/mosdac/`. Keep
+  `mdapi`'s `config.json` outside the repo, because it holds the password.
 
 **Still required from the user, in this order:**
 1. **One sample file:**
@@ -199,19 +221,28 @@ models/       base.py (MaskedSequenceEncoder, resolve_device), trajectory/, inte
 registry/     checkpoint.py (envelopes, atomic save), registry.py (model states)
 training/     config.py, pipeline.py, train_{trajectory,intensity,satellite}.py, prepare_{ibtracs,satellite}.py
 evaluation/   trajectory_metrics.py, intensity_metrics.py, satellite_metrics.py, basin_report.py, live_check.py
-tests/        262 tests
+tests/        305 tests
 ```
 
 **Inputs.** Training and inference share one feature definition in
-`preprocessing/features.py`. `FEATURE_SET_VERSION = "1.0"`, `SEQUENCE_LENGTH = 8`
+`preprocessing/features.py`. `FEATURE_SET_VERSION = "1.1"`, `SEQUENCE_LENGTH = 8`
 steps, `MIN_OBSERVATIONS = 3`.
-- **16 step features:**
+- **20 step features:**
   - position: `latitude`, `abs_latitude`, `longitude_sin`, `longitude_cos`
   - intensity: `wind_speed_kph`, `pressure_hpa`
   - motion: `movement_speed_kph`, `heading_sin`, `heading_cos`
   - changes: `delta_hours`, `wind_delta`, `pressure_delta`, `lat_delta`,
     `lon_delta`
   - season: `month_sin`, `month_cos`
+  - added in 1.1: `pressure_present`, `coriolis_param` (10⁻⁴ s⁻¹),
+    `wind_change_12h`, `wind_change_12h_present`
+- **Missing values:** a missing pressure is a neutral 1010 hPa with
+  `pressure_present = 0`, and training withholds pressure on 15% of samples so
+  the flag is learned. A fix without wind is dropped; a *current* fix without
+  wind makes both forecasts decline with a reason. 1.0 fed 0 hPa and 0 kph
+  instead, which made trajectory forecasts without pressure nonsense.
+- **Coverage of the 14-feature XGBoost model on branch `arpitsecond`:** every
+  one of its features is represented (details in `docs/AI_ARCHITECTURE.md` §5).
 - **6 environmental features:** `sea_surface_temperature_c`, `humidity_percent`
   and `wind_shear_kph`, each with a `*_present` flag. **All six are currently
   inert** (§8).
@@ -298,23 +329,26 @@ Regenerate with `python evaluation/basin_report.py`.
 
 | | +6h | +12h | +24h |
 | --- | --- | --- | --- |
-| Model | 29.0 km | 62.7 km | 146.4 km |
+| Model (feature set 1.1) | 28.8 km | 62.8 km | 146.6 km |
+| Model, pressure withheld | 28.9 km | 63.0 km | 147.1 km |
 | Linear extrapolation | 31.8 km | 72.4 km | 175.5 km |
 | Persistence (storm stays put) | 105.1 km | 205.8 km | 396.4 km |
 
-`validation_skill` = 0.631. The service reports it as trajectory `confidence`,
+Feature set 1.0 scored 29.0 / 62.7 / 146.4 km on the same storms, so the 1.1
+changes are neutral for accuracy; their purpose was the missing-pressure fix.
+`validation_skill` = 0.63. The service reports it as trajectory `confidence`,
 defined as 1 − model_error / persistence_error at +24 h.
 
 **Trajectory by basin:**
 
 | Basin | Storms | +6h | +12h | +24h | Lead over linear at +24h |
 | --- | --- | --- | --- | --- | --- |
-| EP | 101 | 22 | 49 | 117 | 10% |
-| NA | 118 | 30 | 68 | 164 | 20% |
-| WP | 184 | 31 | 65 | 150 | 17% |
-| **NI** | **27** | **32** | **63** | **141** | **17%** |
-| SI | 96 | 27 | 58 | 133 | 16% |
-| SP | 60 | 35 | 74 | 174 | 15% |
+| EP | 101 | 22 | 50 | 117 | 10% |
+| NA | 118 | 30 | 69 | 167 | 19% |
+| WP | 184 | 30 | 65 | 151 | 17% |
+| **NI** | **27** | **31** | **63** | **137** | **20%** |
+| SI | 96 | 27 | 57 | 133 | 16% |
+| SP | 60 | 35 | 74 | 172 | 16% |
 
 Errors are in km. NI has the fewest held-out storms, so its figure is the least
 certain.
@@ -323,13 +357,29 @@ certain.
 
 | | +6h | +12h | +24h |
 | --- | --- | --- | --- |
-| Wind error, model | 6.4 kph | 11.3 kph | 19.7 kph |
+| Wind error, model | 6.4 kph | 11.3 kph | 19.8 kph |
 | Wind error, persistence | 8.3 kph | 15.8 kph | 28.6 kph |
-| Pressure error, model | 2.5 hPa | 4.4 hPa | 7.8 hPa |
+| Pressure error, model | 2.5 hPa | 4.5 hPa | 7.8 hPa |
 | Pressure error, persistence | 3.2 hPa | 6.0 hPa | 11.0 hPa |
 
-Trend accuracy is 65.9% (macro F1 0.659), against a 36.9% majority-class
+Trend accuracy is 65.9% (macro F1 0.662), against a 36.9% majority-class
 baseline.
+
+**Historical similarity (analogue ensemble).** This was evaluated on 535
+held-out storms (10,067 queries), with an index built from the other storms
+only. Analogues had to finish before each query time, so this is conservative.
+
+| | +6h | +12h | +24h |
+| --- | --- | --- | --- |
+| Analogue ensemble (served, curvature method) | 30.3 km | 67.3 km | 160.9 km |
+| First design (absolute displacements, not served) | 42.2 km | 88.9 km | 193.3 km |
+| Linear extrapolation | 29.8 km | 67.9 km | 167.7 km |
+| Persistence | 105.5 km | 206.6 km | 398.3 km |
+| Wind MAE: analogue (persistence) | 7.7 (8.5) kph | 13.4 (16.2) kph | 23.7 (29.1) kph |
+
+Skill against persistence at +24 h is 0.596, which is served as `confidence`.
+The spread correlates weakly with error (r ≈ 0.3). The ensemble is weaker than
+the neural track model; its value is independence, not accuracy.
 
 **Invalid numbers.** Any "27–44% lead over linear" figure from before commit
 `32ed312` came from leaky data and must not be quoted.
@@ -371,6 +421,15 @@ epochs), intensity about 6 min (18 epochs).
 - Satellite analysis. Needs real imagery and a satellite checkpoint.
 
 **Fixed after the first handoff** (all with tests):
+- **Missing pressure produced nonsense track forecasts (feature set 1.1).**
+  Found while checking coverage against the 14 XGBoost features on branch
+  `arpitsecond`. A request without pressure fed 0 hPa to the model, and the
+  trajectory came back `COMPLETED` heading the wrong way. Pressure is now
+  flagged (`pressure_present`), training withholds it on 15% of samples, and
+  the response `reason` quotes the measured error without pressure. A current
+  fix without wind declines both forecasts instead of feeding 0 kph.
+  `coriolis_param` and the 12-hour wind change were added at the same time.
+  Accuracy is unchanged within noise.
 - **Satellite source-key mismatch.** Training tagged frames `SENSOR|BAND` while
   inference built keys from `imageType` alone, so every real request used the
   UNKNOWN slot, and training never taught that slot. Fixed with source dropout
@@ -410,7 +469,6 @@ epochs), intensity about 6 min (18 epochs).
   comparison has been done (§11).
 
 **Future (extension points only, deliberately not faked):**
-- Historical similarity (the Analogue Ensemble).
 - Explainability and Grad-CAM, and the structural-signature rule engine.
 - ECMWF as a comparison baseline.
 
@@ -445,7 +503,12 @@ auto-reload for development (off by default).
     windSpeedKph, pressureHpa}]}`
   - `satelliteAnalysis{..., cycloneDetected, confidence, cycloneCenter?,
     features?, gradcamImageUrl?}`
-  - `historicalSimilarity{..., similarCyclones[]}`
+  - `historicalSimilarity{..., similarCyclones[{historicalCycloneId, similarityScore,
+    rank, similarityBasis, historicalCycloneName?, season?}], confidence?,
+    analogueForecast[{forecastHours, timestamp, latitude, longitude,
+    windSpeedKph, spreadKm, memberCount}]}`. `confidence` and
+    `analogueForecast` are optional additive fields that the `Ab4J` Java DTO
+    ignores until it adds them.
   - `explanations[]`
   - `model{name, version, inferenceTimeMs, trainingDatasetVersion?,
     featureSetVersion?}`
@@ -488,7 +551,7 @@ on.
 | 7 | Build the catalog, train and evaluate the satellite model (per-storm and per-source accuracy against the majority baseline; compare `test` with `test_source_withheld`) | Teammate / agent | 3, 6 |
 | 8 | Weather inputs: join INSAT SST/UTH (2013+) or ERA5 via `cdsapi` (free account) into `observations.csv`. Bump `FEATURE_SET_VERSION` if feature meaning changes, then retrain trajectory and intensity. | Agent + user (account) | Data access |
 | 9 | Merge the `Ab4J` Spring AI client into the backend branch and run end to end | Backend owner | 1 |
-| 10 | Historical similarity (Analogue Ensemble), then Grad-CAM and structural signature | Agent | 7, 9 |
+| 10 | ~~Historical similarity (Analogue Ensemble)~~ **Done.** Remaining: Grad-CAM and the structural signature (differentiator D), which need imagery | Agent | 7 |
 | 11 | ~~Nature codes, reload, Python 3.11~~ **Done.** Remaining: a GPU training run, on a machine that has one | Teammate | — |
 
 ---
@@ -558,8 +621,11 @@ React (map / timeline)
    - `python training/train_trajectory.py --dataset data/processed/observations.csv`
    - `python training/train_intensity.py --dataset data/processed/observations.csv`
    - Add `--device cuda|cpu` to force a device.
-   - Alternative: copy the two current `.pt` files from the development laptop.
-     They are valid for this commit (feature set 1.0).
+   - `python training/build_analogue_index.py --dataset data/processed/observations.csv`
+     builds the historical-similarity index (~11 min on CPU, no training).
+   - Alternative: copy the two current `.pt` files and the two
+     `analogue_index.*` files from the development laptop. They are valid for
+     this commit (feature set 1.1).
 4. **Satellite, once imagery exists:**
    - Build the catalog:
      `python training/prepare_satellite.py imagefolder --root data/processed/satellite/images --output data/processed/satellite/catalog.json`,

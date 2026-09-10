@@ -55,6 +55,13 @@ class TrainingConfig:
     # dataset instead of being guessed in advance.
     early_stopping_patience: int = 10
 
+    # Fraction of training samples whose pressure is withheld (neutral value,
+    # pressure_present = 0) before the scaler is fitted. The contract makes
+    # pressure optional; without this the flag would be constant in training,
+    # the scaler would zero it, and the model would never learn to forecast
+    # without pressure. Applied to the training split only.
+    pressure_dropout: float = 0.15
+
     # Weight on the trend classification loss relative to the regression loss.
     # Intensity only.
     trend_loss_weight: float = 0.5

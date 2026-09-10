@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.schemas.contract import HealthResponse
+from app.services import extensions
 from registry.registry import get_registry
 
 router = APIRouter(prefix="/api/v1", tags=["health"])
@@ -26,5 +27,5 @@ def health() -> HealthResponse:
         status="UP",
         service=SERVICE_NAME,
         version=SERVICE_VERSION,
-        models=get_registry().summary(),
+        models={**get_registry().summary(), "similarity": extensions.summary()},
     )

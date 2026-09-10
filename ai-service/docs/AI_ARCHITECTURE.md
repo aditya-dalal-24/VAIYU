@@ -223,25 +223,63 @@ wrong way — an image no sensor would record.
 
 ## 5. Input features
 
-Sixteen per step, in the fixed order defined by `STEP_FEATURE_NAMES`:
+Twenty per step (feature set **1.1**), in the fixed order defined by
+`STEP_FEATURE_NAMES`, fed as a sequence of up to 8 steps:
 
 | Feature | Notes |
 |---|---|
 | `latitude`, `abs_latitude` | degrees |
 | `longitude_sin`, `longitude_cos` | circular encoding — 179° and −179° are adjacent |
-| `wind_speed_kph`, `pressure_hpa` | contract units |
+| `wind_speed_kph` | contract units; **required** — fixes without it are dropped, as in training |
+| `pressure_hpa` | real value, or a neutral 1010 hPa when absent — never 0 |
 | `movement_speed_kph` | reported, or derived from the previous fix |
 | `heading_sin`, `heading_cos` | circular encoding of movement direction |
-| `delta_hours` | gap since the previous fix; tracks are irregularly sampled |
-| `wind_delta`, `pressure_delta` | change since the previous fix |
+| `delta_hours` | gap since the previous fix; 0 marks the first step |
+| `wind_delta`, `pressure_delta` | change since the previous fix; pressure change is 0 unless both pressures are real |
 | `lat_delta`, `lon_delta` | displacement since the previous fix |
 | `month_sin`, `month_cos` | seasonality |
+| `pressure_present` | 1 when the fix reported a pressure *(1.1)* |
+| `coriolis_param` | f = 2Ω·sin(lat), in units of 10⁻⁴ s⁻¹ *(1.1)* |
+| `wind_change_12h`, `wind_change_12h_present` | change against the fix nearest 12 h earlier (10–14 h window), may reach before the 8-step window *(1.1)* |
 
 Six environmental features, each **paired with a presence flag**:
 `seaSurfaceTemperatureC`, `humidityPercent`, `windShearKph`. The contract makes
 these optional, so a missing value is filled with a neutral default *and*
 flagged as absent — the model can then distinguish "missing" from "genuinely
 this value", which silent imputation would hide.
+
+**Why 1.1 exists.** Feature set 1.0 had a real bug: pressure is optional in the
+contract, and a missing value entered the model as 0 hPa — far outside anything
+in training — so a trajectory request without pressure returned `COMPLETED` with
+a forecast heading the wrong way. Wind had the same silent-zero path. 1.1 flags
+pressure instead, and **training withholds pressure on 15% of samples**
+(`pressure_dropout`) so the flag is learned; without that it would be constant
+in training and the scaler would zero it. The trainer also scores held-out
+storms with pressure withheld, and the service quotes that figure in the
+trajectory `reason` when a request has no pressure. A current fix without wind
+declines both forecasts with a reason (not a 422, so other analyses still run).
+
+`coriolis_param` is scaled to 10⁻⁴ s⁻¹ because its raw spread (~6×10⁻⁵ s⁻¹)
+would fall under the scaler's degenerate-variance threshold and be zeroed.
+
+**Measured effect**, same 559 held-out storms: accuracy is unchanged within
+noise (trajectory 146.4 → 146.6 km at +24 h; wind MAE 19.7 → 19.8 kph; trend
+macro F1 0.659 → 0.662). The added features are close to neutral for a sequence
+model, which already sees latitude and the full wind history. The gain is the
+pressure-free path: 147.1 km at +24 h with pressure withheld, where 1.0 produced
+nonsense.
+
+**Relation to the XGBoost intensity model on branch `arpitsecond`.** That model
+uses 14 single-time-step features. Every one is represented here: `lat`, `lon`
+(circular), wind (kph rather than kt — a linear rescale the scaler absorbs),
+pressure, `pressure_available` (`pressure_present`), translation speed and
+heading (circular), `coriolis_param`, the 6-hour wind/lat/lon changes (per-step
+deltas; with synoptic fixes the step is 6 h), `lag_6h_available` (`delta_hours`
+= 0 marks a missing previous fix), the 12-hour wind change, and month
+(circular). The sequence model additionally sees up to 8 steps of history. The
+two models are not directly comparable on metrics: that one predicts wind at
++24 h only, on a North Indian dataset with a season split; this one predicts
+track and intensity at +6/12/24 h on a global dataset with a storm-hash split.
 
 `FEATURE_SET_VERSION` is recorded in every checkpoint. Changing the feature
 layout without retraining is rejected at load time rather than served.
@@ -614,15 +652,15 @@ synoptic fixes only (11,436 held-out samples across 559 unseen cyclones):
 
 | Basin | Cyclones | Samples | +6h | +12h | +24h | vs linear at +24h |
 | --- | --- | --- | --- | --- | --- | --- |
-| EP East/Central Pacific | 101 | 1,693 | 22 km | 49 km | 117 km | beats by 10% |
-| NA North Atlantic | 118 | 1,904 | 30 km | 68 km | 164 km | beats by 20% |
-| WP West Pacific | 184 | 4,168 | 31 km | 65 km | 150 km | beats by 17% |
-| **NI North Indian** | **27** | **399** | **32 km** | **63 km** | **141 km** | **beats by 17%** |
-| SI South Indian | 96 | 2,198 | 27 km | 58 km | 133 km | beats by 16% |
-| SP South Pacific | 60 | 1,074 | 35 km | 74 km | 174 km | beats by 15% |
+| EP East/Central Pacific | 101 | 1,693 | 22 km | 50 km | 117 km | beats by 10% |
+| NA North Atlantic | 118 | 1,904 | 30 km | 69 km | 167 km | beats by 19% |
+| WP West Pacific | 184 | 4,168 | 30 km | 65 km | 151 km | beats by 17% |
+| **NI North Indian** | **27** | **399** | **31 km** | **63 km** | **137 km** | **beats by 20%** |
+| SI South Indian | 96 | 2,198 | 27 km | 57 km | 133 km | beats by 16% |
+| SP South Pacific | 60 | 1,074 | 35 km | 74 km | 172 km | beats by 16% |
 
 The model beats linear extrapolation in every basin, including the North Indian
-Ocean, by 10-20% at +24h. That is a real but modest margin, and it is the honest
+Ocean, by 10-20% at +24h (feature set 1.1 checkpoint; 1.0 was within 4 km everywhere). That is a real but modest margin, and it is the honest
 one: an earlier version of this table reported 27-44%, measured on a table that
 still contained IBTrACS' interpolated three-hourly rows (section 8). Those rows
 barely changed the model's own error but handicapped the linear baseline, so the
@@ -639,6 +677,42 @@ clearest improvement available.
 MAE 2.5 / 4.4 / 7.8 hPa against 3.2 / 6.0 / 11.0. Trend classification reaches
 65.9% accuracy and 0.659 macro F1, against a 36.9% majority-class baseline, over
 a near-balanced three-way split.
+
+---
+
+## 10e. Historical similarity: the analogue ensemble
+
+Implemented in `models/analogue/index.py`, built and evaluated by
+`training/build_analogue_index.py`, served by `app/services/extensions.py`.
+It has no learned weights and shares nothing with the neural models: it is the
+independent second forecast of the locked differentiator C.
+
+- **Windows.** Every archive storm is cut into 24 h windows ending at a fix T,
+  which need reported fixes at T−24…T. Each window is described by five equally
+  weighted groups: `TRACK_PATTERN` (earlier positions in km east/north of T),
+  `LOCATION`, `WIND_SPEED` (wind and its 12/24 h change), `PRESSURE` (only when
+  the query has one) and `SEASON`. A query is compared only on what it knows,
+  and needs at least 12 h of history.
+- **Selection.** The ten nearest windows from ten distinct storms, in the same
+  hemisphere. Each analogue's outcome must end before the query time, so
+  rewinds never see the future. The query's own storm is excluded by
+  space-time proximity.
+- **Forecast.** Each member contributes its *deviation from its own
+  straight-line motion*, added to the query's own extrapolation; wind is the
+  current wind plus the members' mean change. The first design averaged
+  absolute displacements and lost to linear extrapolation at every horizon
+  (193 vs 168 km at +24 h), because it mixes in the members' different speeds.
+  That design is kept in the build's metrics as a recorded comparison.
+- **Measured** (535 held-out storms, 10,067 queries): 30.3 / 67.3 / 160.9 km at
+  +6/12/24 h, against linear 29.8 / 67.9 / 167.7 and persistence
+  105.5 / 206.6 / 398.3. Wind MAE is 7.7 / 13.4 / 23.7 kph against persistence
+  8.5 / 16.2 / 29.1. Skill against persistence at +24 h is 0.596, served as
+  `confidence`. Spread correlates with error at only r ≈ 0.3, so it is a hint,
+  not a calibrated uncertainty.
+- **Response.** The contract's `similarCyclones` (IBTrACS SIDs, score in
+  (0, 1], basis) plus optional `confidence` and `analogueForecast`
+  (section 18). Without an index the block is `NOT_AVAILABLE` with a reason, and
+  the health endpoint reports it under `models.similarity`.
 
 ---
 

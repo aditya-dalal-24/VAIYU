@@ -514,3 +514,59 @@ class TestReloadIsOptIn:
 
         monkeypatch.setenv("RELOAD", value)
         assert _reload_requested() is False
+
+
+class TestMissingCurrentFields:
+    """Behaviour when optional contract fields are absent from the current fix.
+
+    Before feature set 1.1 a missing pressure entered the trajectory model as
+    0 hPa and a missing wind as 0 kph, and the trajectory came back COMPLETED
+    on that nonsense.
+    """
+
+    def test_missing_current_wind_declines_both_forecasts_with_a_reason(
+        self, client, analysis_request_body, trained_registry
+    ):
+        body = analysis_request_body()
+        body["currentObservation"]["windSpeedKph"] = None
+        response = client.post(ANALYSIS_URL, json=body)
+        payload = response.json()
+
+        # Not a 422: other requested analyses must still be able to run.
+        assert response.status_code != 422
+        for block in ("trajectoryPrediction", "intensityPrediction"):
+            assert payload[block]["status"] == "NOT_AVAILABLE"
+            assert "windSpeedKph" in payload[block]["reason"]
+        assert payload["trajectoryPrediction"].get("predictedPositions", []) == []
+
+    def test_missing_current_wind_does_not_block_other_analyses(
+        self, client, analysis_request_body, trained_registry
+    ):
+        body = analysis_request_body(
+            analysis_types=["TRAJECTORY_PREDICTION", "HISTORICAL_SIMILARITY"]
+        )
+        body["currentObservation"]["windSpeedKph"] = None
+        payload = client.post(ANALYSIS_URL, json=body).json()
+
+        assert "historicalSimilarity" in payload
+
+    def test_missing_pressure_still_forecasts_track_and_says_so(
+        self, client, analysis_request_body, trained_registry
+    ):
+        body = analysis_request_body()
+        body["currentObservation"]["pressureHpa"] = None
+        for item in body["observationHistory"]:
+            item["pressureHpa"] = None
+        payload = client.post(ANALYSIS_URL, json=body).json()
+
+        trajectory = payload["trajectoryPrediction"]
+        assert trajectory["status"] == "COMPLETED"
+        assert "pressureHpa" in trajectory["reason"]
+        # Intensity reports pressure, so it still needs a real one to start from.
+        assert payload["intensityPrediction"]["status"] == "NOT_AVAILABLE"
+
+    def test_a_normal_request_carries_no_pressure_note(
+        self, client, analysis_request_body, trained_registry
+    ):
+        payload = client.post(ANALYSIS_URL, json=analysis_request_body()).json()
+        assert "reason" not in payload["trajectoryPrediction"]

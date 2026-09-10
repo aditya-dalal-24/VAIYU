@@ -105,6 +105,34 @@ class DatasetError(Exception):
     """Raised when the supplied dataset cannot be used as-is."""
 
 
+def withhold_pressure(sequences: np.ndarray, masks: np.ndarray, rows=None) -> np.ndarray:
+    """Return a copy of ``sequences`` with pressure withheld on ``rows``.
+
+    Pressure becomes the neutral stand-in, its presence flag 0 and its tendency
+    0 on every real step -- exactly what the feature builder produces for a
+    request that carries no pressure. ``rows`` defaults to every sample, which
+    is how the "pressure withheld" evaluation is built.
+    """
+    from preprocessing.features import NEUTRAL_PRESSURE_HPA, STEP_FEATURE_NAMES
+
+    out = sequences.copy()
+    selected = np.arange(len(out)) if rows is None else np.asarray(rows, dtype=int)
+    if selected.size == 0:
+        return out
+
+    real = masks[selected] > 0
+    for name, value in (
+        ("pressure_hpa", NEUTRAL_PRESSURE_HPA),
+        ("pressure_delta", 0.0),
+        ("pressure_present", 0.0),
+    ):
+        column = STEP_FEATURE_NAMES.index(name)
+        block = out[selected, :, column]
+        block[real] = value
+        out[selected, :, column] = block
+    return out
+
+
 @dataclass
 class SupervisedSamples:
     """Model-ready arrays plus the identifiers needed to split them safely."""

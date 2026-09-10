@@ -15,7 +15,7 @@ and the complete project state for the next machine or agent is in
 | Trajectory prediction | Trained and serving. Beats linear extrapolation in all six basins, by 10–20% at +24h. |
 | Intensity prediction | Trained and serving. Wind MAE 22–31% below persistence; trend accuracy 66% vs a 37% baseline. |
 | Satellite analysis | Architecture, training pipeline and source handling ready; **needs imagery**. Reports `NOT_AVAILABLE` until a checkpoint exists. |
-| Historical similarity | Extension point only. Reports `NOT_AVAILABLE` with a reason. |
+| Historical similarity | Analogue ensemble over 3,675 archive storms. Returns similar storms **and** an independent second forecast; at +24h it beats linear extrapolation by 4% (161 vs 168 km), below the neural track model (147 km). |
 | Explainability | Extension point only. |
 
 **Checkpoints are not committed** (they are large and regenerable), so a fresh
@@ -46,7 +46,7 @@ process: `netstat -ano | findstr :8000`.
 ## Test
 
 ```bash
-python -m pytest              # 262 tests
+python -m pytest              # 305 tests
 ```
 
 Verified on Python **3.11.9** and **3.13.2**, each from a fresh install of
@@ -139,6 +139,9 @@ identical, so a frame-level split would report an accuracy that means nothing.
 python training/train_trajectory.py --dataset data/processed/observations.csv
 python training/train_intensity.py  --dataset data/processed/observations.csv
 
+# historical similarity: builds and evaluates the analogue index (no training)
+python training/build_analogue_index.py --dataset data/processed/observations.csv
+
 # only if you prepared a catalog
 python training/train_satellite.py --catalog data/processed/satellite/catalog.json
 ```
@@ -156,6 +159,12 @@ identify; without it, that slot would stay at its random starting value. After
 training, the held-out split is scored twice — once with the real sources, and
 once with every source withheld — and both results are stored in the
 checkpoint's metrics as `test` and `test_source_withheld`.
+
+**Pressure dropout.** The track and intensity trainers withhold pressure on 15%
+of training samples (`pressure_dropout` in `training/config.py`). Pressure is
+optional in the contract, and this is what teaches the model to forecast
+without it. The trajectory trainer also scores the held-out storms with pressure
+withheld, and stores that as `pressure_withheld` in the checkpoint.
 
 Checkpoints land in `checkpoints/` and are picked up at startup. No code change
 is needed between training and serving.
@@ -193,6 +202,7 @@ Handover is a file copy:
 checkpoints/trajectory.pt
 checkpoints/intensity.pt
 checkpoints/satellite.pt
+checkpoints/analogue_index.npz    # and analogue_index.json beside it
 ```
 
 Drop them into `checkpoints/` on the serving machine and restart. Nothing else
@@ -205,6 +215,50 @@ feature-set version it was built under; if the layout has moved the registry
 reports `CHECKPOINT_INVALID` rather than running a model against inputs it was
 never fitted on. That is the failure most likely to occur when training is split
 across machines, and the one that would otherwise be invisible.
+
+---
+
+## Historical similarity (analogue ensemble)
+
+`HISTORICAL_SIMILARITY` finds past storms whose last 24 hours evolved like the
+current one, then uses what they did next as a **second, independent forecast**.
+It has no learned weights and shares nothing with the neural models, so when
+the two agree that is corroboration, and when they disagree that is worth
+showing.
+
+The response block carries:
+- `similarCyclones`: the contract's evidence list, with IBTrACS SIDs, a
+  similarity score in (0, 1], and the basis used (`TRACK_PATTERN`,
+  `LOCATION`, `WIND_SPEED`, `PRESSURE` when supplied, `SEASON`). Names and
+  seasons are included where the archive has them; per contract §11, Spring
+  Boot stays the authority for the historical record.
+- `analogueForecast` *(optional field)*: the position and wind at +6/12/24 h,
+  the members' spread in km, and the member count.
+- `confidence`: the measured skill against persistence on held-out storms.
+
+Only the analogues' track **curvature** is used. Each member contributes its
+deviation from its own straight-line motion, added to the current storm's own
+extrapolation. Averaging absolute displacements measured worse than plain
+linear extrapolation (193 vs 168 km at +24h), because it mixes in every
+member's different speed.
+
+Measured on 535 held-out storms (10,067 queries):
+
+| | +6h | +12h | +24h |
+| --- | --- | --- | --- |
+| Analogue ensemble | 30.3 km | 67.3 km | 160.9 km |
+| Linear extrapolation | 29.8 km | 67.9 km | 167.7 km |
+| Persistence | 105.5 km | 206.6 km | 398.3 km |
+| Wind MAE (persistence) | 7.7 (8.5) kph | 13.4 (16.2) kph | 23.7 (29.1) kph |
+
+Spread correlates only weakly with error (r ≈ 0.3), so treat it as a hint,
+not a calibrated uncertainty.
+
+Analogues must have finished before the query time, so a rewind never sees
+the future. They must also share the query's hemisphere. The query's own storm
+is excluded by space and time, because live and archive identifiers differ.
+The index needs at least 12 hours of history and a current wind; without an
+index the analysis reports `NOT_AVAILABLE`.
 
 ---
 
@@ -280,6 +334,12 @@ section 10c.
 client (only a field-by-field comparison of its DTOs has been done); the
 satellite model on real imagery.
 
-**Historical similarity and explainability are extension points.** They report
-`NOT_AVAILABLE` with a reason and were deliberately not given placeholder
-implementations.
+**Missing pressure or wind in a request.** A missing pressure is handled: the
+track forecast still runs, and its `reason` states the measured held-out error
+without pressure (147 km at +24h). Intensity still needs a real pressure to
+forecast from. A current fix without wind makes both forecasts decline with a
+reason, while other analyses still run.
+
+**Explainability is an extension point.** It reports nothing
+(`explanations: []`) and was deliberately not given a placeholder
+implementation.

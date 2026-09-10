@@ -220,10 +220,35 @@ class SimilarCyclone(ContractModel):
     season: Optional[int] = None
 
 
+class AnalogueForecastPoint(ContractModel):
+    """One horizon of the analogue ensemble's forecast.
+
+    An optional extension to section 11 (section 18 allows additive fields).
+    The locked product scope treats historical similarity as an independent
+    second forecast, so what the analogues did next is returned, not only who
+    they were. ``spreadKm`` is the members' mean distance from the ensemble
+    mean: a wide spread means the analogues disagree.
+    """
+
+    forecast_hours: int
+    timestamp: datetime
+    latitude: float
+    longitude: float
+    wind_speed_kph: Optional[float] = None
+    spread_km: float
+    member_count: int
+
+
 class HistoricalSimilarity(AnalysisBlock):
-    """Contract section 11. Future extension point; no model implemented."""
+    """Contract section 11, implemented as an analogue ensemble.
+
+    ``similarCyclones`` is the contract's evidence list. ``confidence`` and
+    ``analogueForecast`` are optional additive fields (section 18).
+    """
 
     similar_cyclones: List[SimilarCyclone] = Field(default_factory=list)
+    confidence: Optional[float] = None
+    analogue_forecast: List[AnalogueForecastPoint] = Field(default_factory=list)
 
 
 class Explanation(ContractModel):

@@ -21,6 +21,7 @@ from preprocessing.dataset import (
     build_samples,
     describe_samples,
     load_observations,
+    withhold_pressure,
 )
 from preprocessing.scaler import SequenceScaler
 from preprocessing.splits import (
@@ -117,6 +118,14 @@ def prepare_data(config: TrainingConfig) -> PreparedData:
     train = samples.subset(indices["train"])
     validation = samples.subset(indices["validation"])
     test = samples.subset(indices["test"])
+
+    if config.pressure_dropout > 0 and len(train):
+        generator = np.random.default_rng(config.seed)
+        chosen = np.flatnonzero(generator.random(len(train)) < config.pressure_dropout)
+        train.sequences = withhold_pressure(train.sequences, train.masks, chosen)
+        logger.info(
+            "pressure withheld on %d of %d training samples", len(chosen), len(train)
+        )
 
     scaler = SequenceScaler().fit(train.sequences, train.masks, train.environments)
 

@@ -48,6 +48,11 @@ STEP_FEATURE_NAMES: List[str] = [
     "lon_delta",
     "month_sin",
     "month_cos",
+    # Added in feature set 1.1 (see FEATURE_SET_VERSION).
+    "pressure_present",
+    "coriolis_param",
+    "wind_change_12h",
+    "wind_change_12h_present",
 ]
 
 # Environmental fields are optional in the contract, so each carries a presence
@@ -67,7 +72,14 @@ ENVIRONMENTAL_FEATURE_COUNT = len(ENVIRONMENTAL_FEATURE_NAMES)
 # Bumped whenever the feature layout changes. A checkpoint records the version
 # it was trained with, and the registry refuses to load a mismatch instead of
 # serving quietly wrong numbers.
-FEATURE_SET_VERSION = "1.0"
+#
+# 1.1 added pressure_present, coriolis_param, wind_change_12h and its presence
+# flag. The trigger was a real bug: pressure is optional in the contract, and a
+# missing value used to enter the model as 0 hPa -- far outside anything seen in
+# training -- so a trajectory request without pressure returned COMPLETED with a
+# forecast pointing the wrong way. The other two bring the step vector level
+# with the 14-feature intensity model on branch arpitsecond.
+FEATURE_SET_VERSION = "1.1"
 
 # Sequence length fed to the encoder. Shorter histories are padded on the right
 # and masked; longer ones keep the most recent steps.
@@ -78,6 +90,23 @@ SEQUENCE_LENGTH = 8
 DEFAULT_SEA_SURFACE_TEMPERATURE_C = 28.0
 DEFAULT_HUMIDITY_PERCENT = 75.0
 DEFAULT_WIND_SHEAR_KPH = 15.0
+
+# Stand-in for an absent central pressure: a typical environmental pressure,
+# read together with pressure_present = 0. Never 0 hPa, which the model would
+# read as a real, impossibly deep storm.
+NEUTRAL_PRESSURE_HPA = 1010.0
+
+# Earth's rotation rate, for the Coriolis parameter f = 2 * Omega * sin(lat).
+EARTH_ANGULAR_VELOCITY = 7.2921159e-5
+
+# f is reported in units of 1e-4 per second. In raw s^-1 its spread across the
+# archive (about 6e-5) sits below the scaler's degenerate-variance threshold,
+# and the feature would be silently zeroed.
+CORIOLIS_UNITS = 1e-4
+
+# Window for the 12-hour wind change: the fix closest to 12 h before the step,
+# accepted between 10 and 14 h, matching the intensity model on arpitsecond.
+WIND_CHANGE_12H_WINDOW = (10.0, 14.0)
 
 EARTH_RADIUS_KM = 6371.0
 
@@ -157,8 +186,42 @@ def normalise_longitude(longitude: float) -> float:
     return ((longitude + 180.0) % 360.0) - 180.0
 
 
+def coriolis_parameter(latitude: float) -> float:
+    """f = 2 * Omega * sin(latitude), in units of CORIOLIS_UNITS (1e-4 / s)."""
+    return 2.0 * EARTH_ANGULAR_VELOCITY * math.sin(math.radians(latitude)) / CORIOLIS_UNITS
+
+
+def wind_change_12h(
+    current: Observation, earlier: Sequence[Observation]
+) -> tuple[float, float]:
+    """Wind change against the fix nearest 12 h earlier, and a presence flag.
+
+    ``earlier`` must hold only fixes before ``current``. Returns ``(0.0, 0.0)``
+    when no fix with a wind value falls inside WIND_CHANGE_12H_WINDOW, so an
+    absent history is distinguishable from a genuinely unchanged wind.
+    """
+    if current.wind_speed_kph is None:
+        return 0.0, 0.0
+
+    low, high = WIND_CHANGE_12H_WINDOW
+    best: Optional[Observation] = None
+    best_gap = float("inf")
+    for candidate in earlier:
+        if candidate.wind_speed_kph is None:
+            continue
+        hours = (current.timestamp - candidate.timestamp).total_seconds() / 3600.0
+        if low <= hours <= high and abs(hours - 12.0) < best_gap:
+            best, best_gap = candidate, abs(hours - 12.0)
+
+    if best is None:
+        return 0.0, 0.0
+    return current.wind_speed_kph - best.wind_speed_kph, 1.0
+
+
 def _step_features(
-    current: Observation, previous: Optional[Observation]
+    current: Observation,
+    previous: Optional[Observation],
+    earlier: Sequence[Observation] = (),
 ) -> List[float]:
     """Feature vector for one step, relative to the step before it.
 
@@ -168,8 +231,11 @@ def _step_features(
     """
     longitude = math.radians(normalise_longitude(current.longitude))
 
+    # Wind is required: build_sequence drops fixes without it, exactly as the
+    # training table does, so a missing wind never reaches here as a number.
     wind = current.wind_speed_kph if current.wind_speed_kph is not None else 0.0
-    pressure = current.pressure_hpa if current.pressure_hpa is not None else 0.0
+    pressure_present = 1.0 if current.pressure_hpa is not None else 0.0
+    pressure = current.pressure_hpa if pressure_present else NEUTRAL_PRESSURE_HPA
 
     if previous is None:
         delta_hours = 0.0
@@ -180,11 +246,13 @@ def _step_features(
     else:
         delta_hours = (current.timestamp - previous.timestamp).total_seconds() / 3600.0
         previous_wind = previous.wind_speed_kph if previous.wind_speed_kph is not None else wind
-        previous_pressure = (
-            previous.pressure_hpa if previous.pressure_hpa is not None else pressure
-        )
         wind_delta = wind - previous_wind
-        pressure_delta = pressure - previous_pressure
+        # A pressure change needs two real pressures; a neutral stand-in on
+        # either side would invent a tendency.
+        if pressure_present and previous.pressure_hpa is not None:
+            pressure_delta = pressure - previous.pressure_hpa
+        else:
+            pressure_delta = 0.0
         lat_delta = current.latitude - previous.latitude
         lon_delta = normalise_longitude(current.longitude - previous.longitude)
 
@@ -234,6 +302,9 @@ def _step_features(
         lon_delta,
         math.sin(month_angle),
         math.cos(month_angle),
+        pressure_present,
+        coriolis_parameter(current.latitude),
+        *wind_change_12h(current, earlier),
     ]
 
 
@@ -281,14 +352,27 @@ def build_sequence(
 
     ordered = sorted(observations, key=lambda item: item.timestamp)
 
+    # Fixes without a wind value are dropped, as they are from the training
+    # table. The newest fix is the forecast's base time, so it is never dropped
+    # silently -- callers check it before getting here.
+    ordered = [item for item in ordered if item.wind_speed_kph is not None]
+    if len(ordered) < MIN_OBSERVATIONS:
+        raise InsufficientHistory(
+            f"At least {MIN_OBSERVATIONS} observations with a wind speed are required."
+        )
+
     # Keep the most recent window: older context beyond this adds little and
     # would force every sequence to carry the length of the longest track.
-    window = ordered[-sequence_length:]
+    offset = max(0, len(ordered) - sequence_length)
+    window = ordered[offset:]
 
     rows: List[List[float]] = []
     for index, observation in enumerate(window):
         previous = window[index - 1] if index > 0 else None
-        rows.append(_step_features(observation, previous))
+        # The 12-hour lookback may reach before the window: those fixes are
+        # still at or before this step, so using them is not future data.
+        earlier = ordered[: offset + index]
+        rows.append(_step_features(observation, previous, earlier))
 
     mask = [1.0] * len(rows)
 
