@@ -16,7 +16,11 @@ as an error. Pressure is a central minimum rather than an average, so
 
 **Only tropical (``NATURE == TS``) fixes are kept.** Extratropical, subtropical
 and disturbance stages are a different physical regime, and would teach the
-model motion it will never be asked to forecast.
+model motion it will never be asked to forecast. Uncoded (``NR``) fixes are also
+left out, deliberately, even though the live adapter accepts them: they are
+mostly the weak uncoded ends of otherwise-tropical storms, and the measurement
+behind that choice is recorded at ``TROPICAL_NATURES`` in
+``preprocessing/ibtracs_live.py``.
 
 **Only synoptic fixes (00/06/12/18Z) are kept.** IBTrACS resamples every track
 to three-hourly, but the 03/09/15/21Z rows are interpolations *between* reported

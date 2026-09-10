@@ -17,11 +17,11 @@ Companion documents, all in `ai-service/`:
 | --- | --- | --- |
 | `TRAJECTORY_PREDICTION` | Implemented, trained, verified | Yes, where checkpoints are present |
 | `INTENSITY_PREDICTION` | Implemented, trained, verified | Yes, where checkpoints are present |
-| `SATELLITE_ANALYSIS` | Pipeline implemented; **no imagery, no checkpoint**; one latent defect (§8) | No: returns `NOT_AVAILABLE` + reason |
+| `SATELLITE_ANALYSIS` | Pipeline and source handling implemented; **no imagery, no checkpoint** | No: returns `NOT_AVAILABLE` + reason |
 | `HISTORICAL_SIMILARITY` | Extension point only | No: returns `NOT_AVAILABLE` + reason |
 | Explainability | Extension point only | No: `explanations: []` |
 
-- **Tests:** 232 passing (`python -m pytest`, 14 test files).
+- **Tests:** 262 passing (`python -m pytest`, 15 test files), on Python 3.11.9 and 3.13.2.
 - **Contract check:** 46/46 passing against the live service (§9).
 - **Git:** the 8 AI commits listed in §3, plus handoff-doc commits, are all local and **not pushed**.
 
@@ -113,7 +113,7 @@ gitignored and **exist on the development laptop only**.
 | --- | --- | --- |
 | IBTrACS global best track | `data/raw/ibtracs.since1980.csv` (138 MB) | Present locally. Remote name is `ibtracs.since1980.list.v04r01.csv` (see the URL in the README; the shorter name 404s). |
 | **Training table (tracks)** | `data/processed/observations.csv` (7.3 MB) | Present locally. 90,537 synoptic fixes, 3,829 storms, 1980-01-02 → 2026-09-08. Storms per basin: WP 1246, EP 708, SI 702, NA 655, SP 417, **NI 177**, SA 1. Produced by the fixed `prepare_ibtracs.py`. |
-| HURSAT-style label array | `data/raw/Cyclone_Labels h5.npy` (1.8 MB) | Present. Shape `(21076, 8)`, object dtype: `basin, storm_id, lon, lat, YYYYMMDDHH, wind_kt, <unknown col, 0.0 in inspected rows>, pressure_hpa`. 485 storms, 3-hourly. **The companion image frames are not on this machine**; the name implies an HDF5 image file that was never provided. |
+| HURSAT-style label array | `data/raw/Cyclone_Labels h5.npy` (1.8 MB) | Present. Shape `(21076, 8)`, object dtype: `basin, storm_id, lon, lat, YYYYMMDDHH, wind_kt, <column 6: see below>, pressure_hpa`. 485 storms, 3-hourly (off-synoptic rows interpolated). Basins **ATLN 7,144 / EPAC 5,010 / WPAC 8,922 — no North Indian frames**. Column 6 is 0–375, zero whenever wind < 34 kt and interpolated at 3-hourly times, so it is *probably* the 34-kt wind radius (unverified). **The companion image frames are not on this machine**; the name implies an HDF5 image file that was never provided. |
 | NASA IMPACT satellite dataset | Described on branches `Ab4J`/`Aditya` in `ai-service/data/satellite/README.md` | **Images not on this machine.** GOES Clean IR 10.7 µm, CC-BY-4.0, DOI 10.34911/rdnt.xs53up, `ImageFolder` layout `images/{train,validation,test}/{cyclone,non_cyclone}/`, split by storm. |
 | Weather dataset | `data/weather/` on the other branch holds only a `.gitkeep` | **Does not exist.** |
 | `data/processed/cyclone_metadata.csv`, `training_table.csv` | Local | Left over from earlier work; **no current code reads them**. |
@@ -199,7 +199,7 @@ models/       base.py (MaskedSequenceEncoder, resolve_device), trajectory/, inte
 registry/     checkpoint.py (envelopes, atomic save), registry.py (model states)
 training/     config.py, pipeline.py, train_{trajectory,intensity,satellite}.py, prepare_{ibtracs,satellite}.py
 evaluation/   trajectory_metrics.py, intensity_metrics.py, satellite_metrics.py, basin_report.py, live_check.py
-tests/        232 tests
+tests/        262 tests
 ```
 
 **Inputs.** Training and inference share one feature definition in
@@ -235,6 +235,15 @@ steps, `MIN_OBSERVATIONS = 3`.
   - Augmentation is rotation and translation only. **No horizontal flip**, because
     it would mirror the spiral's direction of rotation.
   - `IMAGE_SPEC_VERSION = "1.0"`.
+  - **Source handling.** Training replaces the source with UNKNOWN on 20% of
+    frames (`--source-dropout`), so slot 0 is trained rather than left random.
+    At inference, `imageType` may carry the sensor as `<SENSOR>|<BAND>`
+    (`source_key_from_image_type` in `preprocessing/satellite.py`), normalised
+    exactly as catalog fields are: case, repeated spaces and parentheticals are
+    ignored. A plain `imageType` such as `INFRARED` uses slot 0 and carries an
+    "unknown source" note. Health lists the known keys under
+    `models.satellite.sources`. Held-out metrics are stored twice, with real
+    sources (`test`) and with every source withheld (`test_source_withheld`).
 
 **Preprocessing decisions that must not be undone:**
 - **Synoptic fixes only (00/06/12/18Z).** IBTrACS's 3-hourly rows are
@@ -326,7 +335,8 @@ baseline.
 `32ed312` came from leaky data and must not be quoted.
 
 **Live checks** (single storms; these are anecdotes, not skill measurements):
-- **KROVANH** (WP, recurving, via IBTrACS ACTIVE, 24 h withheld): model mean
+- **KROVANH** (WP, recurving, via IBTrACS ACTIVE, 24 h withheld; **all 28 of
+  its fixes are uncoded `NR`**, the kind training excludes): model mean
   105 km, linear 165 km, persistence 211 km.
 - **ep142026** (EP, straight-moving, via NHC, 18 h withheld): model mean 76 km,
   linear 59 km, persistence 268 km. Linear wins on straight tracks; the model's
@@ -360,38 +370,41 @@ epochs), intensity about 6 min (18 epochs).
 **Training-required (code done, needs data):**
 - Satellite analysis. Needs real imagery and a satellite checkpoint.
 
-**Partially completed or known defects (fix before relying on them):**
-1. **Satellite source-key mismatch.** This is a latent defect and **must be fixed
-   before training the satellite model.**
-   - Training frames get keys such as `GOES|10.7 UM THERMAL INFRARED`. At
-     inference, `satellite_inference.py` builds the key from `imageType` alone
-     (`UNKNOWN_SATELLITE|<type>`), because the contract request has no sensor
-     field.
-   - So every real request maps to the UNKNOWN slot, which is **never trained**
-     (there is no source dropout in training), and every result carries the
-     "unknown source" note.
-   - Fix: train with source dropout so the UNKNOWN slot learns something real,
-     **and** agree an `imageType` convention with the backend that carries sensor
-     and band (e.g. `INSAT-3DR|TIR1`). The latter needs no contract change,
-     since `imageType` is already a free string.
-2. **Environmental features are inert.** No weather data has been joined. The
+**Fixed after the first handoff** (all with tests):
+- **Satellite source-key mismatch.** Training tagged frames `SENSOR|BAND` while
+  inference built keys from `imageType` alone, so every real request used the
+  UNKNOWN slot, and training never taught that slot. Fixed with source dropout
+  in training plus the `<SENSOR>|<BAND>` convention in `imageType` (§6, §9).
+  No contract change: `imageType` was already a free string.
+- **Nature-code difference, decided deliberately.** Training keeps `TS` only;
+  the live adapter keeps `TS` + `NR`. Measured on the synoptic rows of
+  `ibtracs.since1980`: 10,226 NR rows across 911 storms, median 25 kt, and 721
+  of those storms also carry TS rows. NR is mostly the weak, uncoded ends of
+  otherwise-tropical storms, and the provisional current season is largely
+  uncoded. Each live storm now carries `uncoded_fixes`, which `--list` shows as
+  `(N uncoded)` and `live_check.py` prints.
+- **Windows reload gotcha.** Auto-reload is now opt-in (`RELOAD=1`). A plain
+  `python app/main.py` no longer starts a reloader child that can outlive its
+  parent. Separately, on Windows the venv's `python.exe` is a launcher that
+  spawns the real interpreter under another PID, so check
+  `netstat -ano | findstr :8000` when a restart seems to change nothing.
+- **Python 3.11.** A fresh 3.11.9 environment built from `requirements.txt`
+  alone passes all 262 tests and serves the checkpoints trained under 3.13.
+
+**Known defects and gaps still open:**
+1. **Environmental features are inert.** No weather data has been joined. The
    scaler zeroes these features, so `environmentalData` in a request is accepted
-   and changes nothing.
-3. **Nature-code inconsistency:** training keeps `TS` only while the live adapter
-   accepts `TS` and `NR`. Minor; decide deliberately.
-4. **Windows port gotcha.** `python app/main.py` runs uvicorn with `reload=True`.
-   On Windows, killing the parent can leave orphaned workers still serving old
-   code on port 8000. Also, the venv's `python.exe` is a launcher that spawns the
-   real interpreter under another PID. For clean restarts run
-   `python -m uvicorn app.main:app --port 8000` and check
-   `netstat -ano | grep :8000`.
+   and changes nothing. Needs data (§10 task 8).
+2. **The backend drops the reasons on a 503.** When nothing requested can run,
+   the service returns 503 with the full body, as contract §14 requires, but the
+   `Ab4J` client discards non-2xx bodies. The fix is backend-side (§11); it is
+   out of this service's scope.
 
 **Untested:**
 - The satellite model on real imagery.
 - Satellite serving with a trained checkpoint against a real image URL.
 - The INSAT reader (**not written yet**).
-- Training on a GPU (only CPU has been run).
-- Any Python other than 3.13.2 (the README says 3.11+, which is unverified).
+- Training on a GPU. There is no NVIDIA GPU on the development laptop, so only CPU has been run.
 - Training on the teammate's laptop.
 - Spring Boot ↔ service **live** integration. Only a static field-by-field DTO
   comparison has been done (§11).
@@ -406,7 +419,8 @@ epochs), intensity about 6 min (18 epochs).
 ## 9. AI-service contract as implemented
 
 **Endpoints.** The service listens on `HOST`/`PORT` environment variables
-(default `0.0.0.0:8000`); `LOG_LEVEL` sets logging.
+(default `0.0.0.0:8000`); `LOG_LEVEL` sets logging; `RELOAD=1` enables
+auto-reload for development (off by default).
 
 - **`GET /api/v1/health`** returns `{status:"UP", service, version:"1.0.0",
   models:{trajectory|intensity|satellite: {available, state, model, version,
@@ -418,7 +432,8 @@ epochs), intensity about 6 min (18 epochs).
   - `observationHistory[]`, **ordered oldest to newest** (otherwise 400)
   - `environmentalData{seaSurfaceTemperatureC?, humidityPercent?,
     windShearKph?}?`
-  - `satelliteImage{imageUrl, imageType?, capturedAt?}?`
+  - `satelliteImage{imageUrl, imageType?, capturedAt?}?`, where `imageType` may
+    be `"<SENSOR>|<BAND>"` (e.g. `"INSAT-3DR|TIR1 10.8 um"`) to name the sensor.
   - At least 3 observations in total, otherwise 422
     `INSUFFICIENT_OBSERVATION_HISTORY`.
 - **Response:** `requestId`, `cycloneId`, `analysisTimestamp`, overall `status`,
@@ -467,14 +482,14 @@ on.
 | 1 | Push the `ai-service/` commits, excluding the frontend files | User | — |
 | 2 | Download the MOSDAC sample file, and report product names and the SCORPIO format (§5) | User | Active account ✔ |
 | 3 | Write `training/prepare_insat.py`: read L1B/L1C HDF5, calibrate to kelvin, georeference, and cut 224 px storm-centred crops at IBTrACS positions (cyclone examples) plus non-cyclone crops from the same images away from storms. Keep the raw-kelvin `.npy` next to each PNG, because differentiator D measures the array, not the picture. Feed the output to the existing catalog path, with `satellite="INSAT-3DR"` and band `TIR1 10.8 um`. Verify on the one sample file first. | Agent | 2 |
-| 4 | Fix the satellite source-key mismatch (§8.1) and add tests | Agent (+ backend owner for the `imageType` convention) | — |
+| 4 | ~~Fix the satellite source-key mismatch~~ **Done.** Remaining: the backend adopts the `imageType` convention (§11) | Backend owner | — |
 | 5 | Generate the exact MOSDAC order list: NI synoptic times from `observations.csv`, sized to fit the disk (the 2023–2025 storms are the fallback) | Agent | 3 |
 | 6 | Order and download the data into `data/raw/mosdac/`, on D: or the teammate's machine | User | 5 |
-| 7 | Build the catalog, train and evaluate the satellite model (per-storm and per-source accuracy against the majority baseline) | Teammate / agent | 3, 4, 6 |
+| 7 | Build the catalog, train and evaluate the satellite model (per-storm and per-source accuracy against the majority baseline; compare `test` with `test_source_withheld`) | Teammate / agent | 3, 6 |
 | 8 | Weather inputs: join INSAT SST/UTH (2013+) or ERA5 via `cdsapi` (free account) into `observations.csv`. Bump `FEATURE_SET_VERSION` if feature meaning changes, then retrain trajectory and intensity. | Agent + user (account) | Data access |
 | 9 | Merge the `Ab4J` Spring AI client into the backend branch and run end to end | Backend owner | 1 |
 | 10 | Historical similarity (Analogue Ensemble), then Grad-CAM and structural signature | Agent | 7, 9 |
-| 11 | Minor items: nature-code consistency, Windows reload gotcha, Python 3.11 and GPU runs | Agent | — |
+| 11 | ~~Nature codes, reload, Python 3.11~~ **Done.** Remaining: a GPU training run, on a machine that has one | Teammate | — |
 
 ---
 
@@ -514,7 +529,13 @@ React (map / timeline)
 **Backend-side requirements:**
 - Send ≥3 fixes in order.
 - Serve satellite images at an http(s) URL the AI service can fetch.
-- Use the `imageType` convention from task 4.
+- Send `imageType` as `"<SENSOR>|<BAND>"` using a key from
+  `GET /api/v1/health` → `models.satellite.sources`. A plain value still works,
+  but it is classified as an unknown source.
+- In `AiServiceClient`, on a 503, read the body with
+  `e.getResponseBodyAs(AiAnalysisResponse.class)` (Spring 6.1, from Boot 3.2.4)
+  rather than returning empty. Otherwise the per-block `NOT_AVAILABLE` reasons
+  are lost.
 - Treat an empty Optional or `NOT_AVAILABLE` as a normal state.
 - Never call FastAPI from controllers directly (§16).
 
@@ -544,7 +565,8 @@ React (map / timeline)
      `python training/prepare_satellite.py imagefolder --root data/processed/satellite/images --output data/processed/satellite/catalog.json`,
      or the `hursat` subcommand, or the INSAT reader from task 3.
    - Train: `python training/train_satellite.py --catalog data/processed/satellite/catalog.json`
-   - Fix §8.1 first.
+   - Source dropout is on by default (`--source-dropout 0.2`). The stored
+     metrics include `test_source_withheld`.
 5. **Evaluate:**
    - `python -m pytest`
    - `python -m uvicorn app.main:app --port 8000`, then `/api/v1/health` should

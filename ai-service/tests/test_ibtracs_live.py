@@ -207,3 +207,34 @@ class TestFindStorm:
 
         with pytest.raises(AtcfError, match="no usable storms"):
             find_storm("KROVANH")
+
+
+class TestUncodedFixesAreVisible:
+    """NR fixes are admitted live but excluded from training, deliberately.
+
+    The decision is only safe if it is visible, so each storm carries the count
+    and its summary shows it.
+    """
+
+    def test_uncoded_fixes_are_counted(self):
+        rows = synoptic_track(nature="TS")[:2] + [
+            row(time="2026-09-01 12:00:00", nature="NR"),
+            row(time="2026-09-01 18:00:00", nature="NR"),
+        ]
+        storm = parse_active(csv(*rows))[0]
+
+        assert len(storm.fixes) == 4
+        assert storm.uncoded_fixes == 2
+        assert "(2 uncoded)" in storm.summary()
+
+    def test_a_fully_coded_storm_reports_nothing_extra(self):
+        storm = parse_active(csv(*synoptic_track(nature="TS")))[0]
+
+        assert storm.uncoded_fixes == 0
+        assert "uncoded" not in storm.summary()
+
+    def test_training_keeps_coded_tropical_fixes_only(self, tmp_path):
+        """The other half of the decision, pinned on the training side."""
+        from training.prepare_ibtracs import TROPICAL_NATURE
+
+        assert TROPICAL_NATURE == "TS"

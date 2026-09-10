@@ -58,7 +58,19 @@ SYNOPTIC_HOURS = (0, 6, 12, 18)
 # tropical. DS (disturbance), ET (extratropical), SS (subtropical) and MX (mixed)
 # are excluded: the models were trained on tropical fixes, and feeding the others
 # in would be an out-of-distribution request dressed up as a normal one.
+#
+# Training (prepare_ibtracs.py) keeps TS only, and the difference is deliberate.
+# Measured on the synoptic rows of ibtracs.since1980: 10,226 NR rows across 911
+# storms, median USA_WIND 25 kt, and 721 of those storms also carry TS rows --
+# NR is overwhelmingly the weak, uncoded start or end of storms that are
+# otherwise tropical. That is not worth admitting into training, where the
+# uncoded remainder could be anything. It is worth admitting here, because the
+# current season is provisional and largely uncoded: dropping NR would discard
+# live storms whose nature simply has not been assigned yet. The count of NR
+# fixes is carried on each storm and printed by live_check, so it is visible
+# rather than silent.
 TROPICAL_NATURES = frozenset({"TS", "NR"})
+UNCODED_NATURE = "NR"
 
 BASIN_NAMES = {
     "NA": "North Atlantic",
@@ -94,18 +106,25 @@ class ActiveStorm:
     basin: str
     season: int
     fixes: List[AtcfFix]
+    # Fixes whose nature was not coded (NR). Training used coded tropical
+    # fixes only, so these are the part of a live request that is least like
+    # the training data; see TROPICAL_NATURES.
+    uncoded_fixes: int = 0
 
     @property
     def basin_name(self) -> str:
         return BASIN_NAMES.get(self.basin, self.basin)
 
     def summary(self) -> str:
-        return (
+        text = (
             f"{self.storm_id}  {self.name:<12} {self.basin_name:<14} "
             f"{len(self.fixes):>3} fixes  "
             f"{self.fixes[0].timestamp:%Y-%m-%d %HZ} to "
             f"{self.fixes[-1].timestamp:%Y-%m-%d %HZ}"
         )
+        if self.uncoded_fixes:
+            text += f"  ({self.uncoded_fixes} uncoded)"
+        return text
 
 
 def parse_active(text: str, basins: Optional[Sequence[str]] = None) -> List[ActiveStorm]:
@@ -179,6 +198,7 @@ def parse_active(text: str, basins: Optional[Sequence[str]] = None) -> List[Acti
                 basin=str(first["BASIN"]),
                 season=int(first["SEASON"]),
                 fixes=fixes,
+                uncoded_fixes=int((group["NATURE"] == UNCODED_NATURE).sum()),
             )
         )
 

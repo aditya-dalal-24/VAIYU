@@ -485,3 +485,32 @@ class TestUncertaintyRadiusProvenance:
         assert radii[6] == 28.1
         assert radii[12] is None and radii[24] is None
         reset_registry()
+
+
+class TestReloadIsOptIn:
+    """Auto-reload stays off unless asked for.
+
+    On Windows the reloader's child process can outlive its parent and keep
+    serving stale code on the port, so a plain `python app/main.py` must not
+    start it.
+    """
+
+    def test_off_by_default(self, monkeypatch):
+        from app.main import _reload_requested
+
+        monkeypatch.delenv("RELOAD", raising=False)
+        assert _reload_requested() is False
+
+    @pytest.mark.parametrize("value", ["1", "true", "YES"])
+    def test_on_when_requested(self, monkeypatch, value):
+        from app.main import _reload_requested
+
+        monkeypatch.setenv("RELOAD", value)
+        assert _reload_requested() is True
+
+    @pytest.mark.parametrize("value", ["", "0", "no", "false"])
+    def test_off_for_anything_else(self, monkeypatch, value):
+        from app.main import _reload_requested
+
+        monkeypatch.setenv("RELOAD", value)
+        assert _reload_requested() is False

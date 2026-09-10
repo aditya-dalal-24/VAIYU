@@ -164,6 +164,24 @@ a frame from an unfamiliar sensor still gets an answer, but the response says
 the model is extrapolating. A classifier trained on GOES IR has no basis for
 the same confidence on an instrument it never saw.
 
+**How a request names its sensor.** The contract's request has no sensor field,
+only a free-string `imageType`, so the sensor travels inside it as
+`"<SENSOR>|<BAND>"` (for example `"INSAT-3DR|TIR1 10.8 um"`). It is normalised
+by the same function that builds catalog keys, so case, repeated spaces and
+parentheticals do not matter. The health endpoint publishes the keys a trained
+model knows under `models.satellite.sources`. A plain `imageType` such as
+`"INFRARED"`, the contract's own example, cannot name a sensor and uses index 0.
+
+**Index 0 is trained, not left random.** This was a latent defect, found and
+fixed before any satellite model was trained: every training frame had a known
+source, so index 0 never received a gradient, while inference -- which could not
+then recover the sensor from `imageType` -- used index 0 for every real request.
+Training now replaces the source with UNKNOWN on a fraction of frames
+(`--source-dropout`, default 0.2), so index 0 learns a sensor-agnostic
+representation. The held-out split is scored both with real sources (`test`)
+and with every source withheld (`test_source_withheld`), because the second
+figure is what a plain-`imageType` request actually gets.
+
 **What it does not output.** Eye detection, spiral structure, cloud density and
 centre coordinates stay null. No label in the reference dataset supports them,
 and section 8 keeps them optional until a model actually produces them.

@@ -152,6 +152,11 @@ def main(args) -> int:
             storm = find_storm(args.storm, basins=args.basin)
             fixes = storm.fixes
             label = f"{storm.name} ({storm.storm_id}, {storm.basin_name})"
+            if storm.uncoded_fixes:
+                print(
+                    f"  note: {storm.uncoded_fixes} of {len(fixes)} fixes have no "
+                    "coded nature (NR); training used coded tropical fixes only"
+                )
         else:
             fixes = fetch_deck(args.storm)
             label = args.storm

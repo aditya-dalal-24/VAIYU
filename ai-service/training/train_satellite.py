@@ -44,6 +44,7 @@ from models.satellite.model import (  # noqa: E402
 )
 from preprocessing.satellite import (  # noqa: E402
     CLASS_NAMES,
+    UNKNOWN_SOURCE,
     SatelliteFrame,
     build_source_vocabulary,
     describe_frames,
@@ -56,6 +57,11 @@ from training.config import DEFAULT_CHECKPOINT_DIR  # noqa: E402
 from training.pipeline import set_seed  # noqa: E402
 
 logger = logging.getLogger(__name__)
+
+# One frame in five trains the UNKNOWN source slot. High enough that the slot
+# learns a usable sensor-agnostic representation, low enough that known-source
+# frames still dominate what the source embedding learns.
+DEFAULT_SOURCE_DROPOUT = 0.2
 
 DEFAULT_LABEL_DEFINITION = (
     "cycloneDetected is true when the frame shows a system at or above "
@@ -92,13 +98,15 @@ def partition(frames: Sequence[SatelliteFrame]) -> Dict[str, List[SatelliteFrame
     return splits
 
 
-def build_loader(frames, vocabulary, batch_size: int, train: bool):
+def build_loader(
+    frames, vocabulary, batch_size: int, train: bool, source_dropout: float = 0.0
+):
     from torch.utils.data import DataLoader
 
     if not frames:
         return None
     return DataLoader(
-        torch_dataset(frames, vocabulary, train=train),
+        torch_dataset(frames, vocabulary, train=train, source_dropout=source_dropout),
         batch_size=batch_size,
         shuffle=train,
     )
@@ -139,7 +147,10 @@ def main(args) -> None:
     model.to(device)
     logger.info("trainable parameters: %d", trainable_parameter_count(model))
 
-    train_loader = build_loader(splits["train"], vocabulary, args.batch_size, True)
+    train_loader = build_loader(
+        splits["train"], vocabulary, args.batch_size, True, args.source_dropout
+    )
+    logger.info("source dropout: %.2f", args.source_dropout)
     validation_loader = build_loader(
         splits["validation"], vocabulary, args.batch_size, False
     )
@@ -217,6 +228,22 @@ def main(args) -> None:
         }
         for line in format_report(metrics["test"]):
             logger.info("held-out: %s", line)
+
+        # The same held-out frames with every source withheld. This is what the
+        # service delivers when a request's imageType does not name a known
+        # sensor, so it is measured rather than assumed to match the score above.
+        withheld_loader = build_loader(
+            splits["test"], {UNKNOWN_SOURCE: 0}, args.batch_size, False
+        )
+        metrics["test_source_withheld"] = evaluate_satellite(
+            model, withheld_loader, splits["test"]
+        )
+        withheld = metrics["test_source_withheld"]
+        logger.info(
+            "held-out with source withheld: accuracy %.3f  f1 %.3f",
+            withheld.get("accuracy", 0.0),
+            withheld.get("f1", 0.0),
+        )
     else:
         logger.warning("test split is empty; no held-out metrics were computed")
 
@@ -231,7 +258,7 @@ def main(args) -> None:
         source_vocabulary=vocabulary,
         class_names=CLASS_NAMES,
         label_definition=args.label_definition,
-        metrics=metrics,
+        metrics={**metrics, "source_dropout": args.source_dropout},
         dataset_version=args.dataset_version,
     )
     logger.info("saved checkpoint to %s", path)
@@ -252,6 +279,15 @@ def parse_args():
         help="how many trailing residual blocks to fine-tune",
     )
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--source-dropout",
+        type=float,
+        default=DEFAULT_SOURCE_DROPOUT,
+        help=(
+            "fraction of training frames whose source is replaced with UNKNOWN, "
+            "so the model can still serve images whose sensor it cannot identify"
+        ),
+    )
     parser.add_argument(
         "--device",
         default="auto",

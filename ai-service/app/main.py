@@ -132,6 +132,18 @@ def root():
     }
 
 
+def _reload_requested() -> bool:
+    """Auto-reload is a development convenience, so it is opt-in.
+
+    It used to be always on. The reloader runs the server in a child process,
+    and on Windows stopping the parent can leave that child alive, still bound
+    to the port and serving whatever code and checkpoints it loaded -- a
+    restart then silently answers from the old process. Set RELOAD=1 while
+    editing code; leave it unset everywhere else.
+    """
+    return os.getenv("RELOAD", "").strip().lower() in {"1", "true", "yes"}
+
+
 if __name__ == "__main__":
     import uvicorn
 
@@ -139,5 +151,5 @@ if __name__ == "__main__":
         "app.main:app",
         host=os.getenv("HOST", "0.0.0.0"),
         port=int(os.getenv("PORT", "8000")),
-        reload=True,
+        reload=_reload_requested(),
     )

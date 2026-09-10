@@ -30,7 +30,11 @@ from app.schemas.contract import (
     ModelInfo,
     SatelliteAnalysis,
 )
-from preprocessing.satellite import build_transform, load_image, source_key
+from preprocessing.satellite import (
+    build_transform,
+    load_image,
+    source_key_from_image_type,
+)
 from registry.registry import LoadedModel
 
 logger = logging.getLogger(__name__)
@@ -105,14 +109,10 @@ def run_satellite(
 
     checkpoint = entry.checkpoint
 
-    # The request carries imageType; the sensor itself is not a contract field,
-    # so the key falls back to the band alone and lands in UNKNOWN when the
-    # model has not seen that combination.
-    key = source_key(
-        satellite=None,
-        spectral_band=None,
-        image_type=request.satellite_image.image_type,
-    )
+    # The sensor is not a contract field, so it travels inside imageType as
+    # "<SENSOR>|<BAND>" (see source_key_from_image_type). A plain imageType
+    # cannot name a sensor and uses the UNKNOWN slot, which training teaches.
+    key = source_key_from_image_type(request.satellite_image.image_type)
     known = checkpoint.knows_source(key)
     index = checkpoint.source_index(key)
 

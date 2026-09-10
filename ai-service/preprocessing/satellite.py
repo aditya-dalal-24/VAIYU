@@ -108,13 +108,39 @@ def source_key(
     image_type: Optional[str] = None,
 ) -> str:
     """Build a normalised source key from whatever metadata is available."""
-    sensor = (satellite or "UNKNOWN_SATELLITE").strip().upper()
+    sensor = " ".join((satellite or "UNKNOWN_SATELLITE").split()).upper()
     band = (spectral_band or image_type or "UNKNOWN_BAND").strip().upper()
     # Spectral band strings carry wavelengths and vendor wording; keep the
     # leading token so "10.7 um Thermal Infrared (GOES Clean IR)" and
     # "10.7 um Thermal IR" do not become two different sources.
-    band = band.split("(")[0].strip()
+    band = " ".join(band.split("(")[0].split())
     return f"{sensor}|{band}"
+
+
+IMAGE_TYPE_SEPARATOR = "|"
+
+
+def source_key_from_image_type(image_type: Optional[str]) -> str:
+    """Source key for an inference request, from its ``imageType`` alone.
+
+    The contract's request carries no sensor field, only a free-string
+    ``imageType``. The convention that lets a caller name the sensor without a
+    contract change is ``"<SENSOR>|<BAND>"`` -- for example
+    ``"INSAT-3DR|TIR1 10.8 um"`` -- normalised exactly as training normalises
+    catalog fields, so the same sensor and band always produce the same key.
+    The exact keys a trained model knows are published by the health endpoint
+    under ``models.satellite.sources``.
+
+    A plain value such as ``"INFRARED"`` (the contract's own example) remains
+    valid. It cannot identify a sensor, so it maps to a key no model was trained
+    on, and inference uses the UNKNOWN source slot -- which training now teaches
+    through source dropout rather than leaving at its random initial value.
+    """
+    if image_type and IMAGE_TYPE_SEPARATOR in image_type:
+        sensor, band = image_type.split(IMAGE_TYPE_SEPARATOR, 1)
+        if sensor.strip() and band.strip():
+            return source_key(sensor, band)
+    return source_key(None, None, image_type)
 
 
 def load_catalog(catalog_path: str) -> List[SatelliteFrame]:
@@ -287,10 +313,15 @@ class SatelliteFrameDataset:
     """
 
     def __init__(self, frames: Sequence[SatelliteFrame], vocabulary: Dict[str, int],
-                 train: bool):
+                 train: bool, source_dropout: float = 0.0):
+        if not 0.0 <= source_dropout <= 1.0:
+            raise ValueError("source_dropout must be between 0 and 1")
         self.frames = list(frames)
         self.vocabulary = dict(vocabulary)
         self.transform = build_transform(train)
+        # Only ever applied while training. Evaluation must see real sources,
+        # or the per-source scores would describe a model nobody serves.
+        self.source_dropout = source_dropout if train else 0.0
 
     def __len__(self) -> int:
         return len(self.frames)
@@ -301,6 +332,13 @@ class SatelliteFrameDataset:
         frame = self.frames[index]
         image = self.transform(load_image(frame.path))
         source = self.vocabulary.get(frame.source_key, 0)
+        # Without this, slot 0 (UNKNOWN) is never trained -- every training frame
+        # has a known source -- yet it is exactly the slot inference uses when a
+        # request's imageType does not name a sensor the model knows. Dropping
+        # the source on a fraction of frames teaches slot 0 a sensor-agnostic
+        # representation. torch's RNG is used so a seeded run is reproducible.
+        if self.source_dropout and float(torch.rand(())) < self.source_dropout:
+            source = 0
         label = 1.0 if frame.is_cyclone else 0.0
 
         return (
@@ -310,11 +348,11 @@ class SatelliteFrameDataset:
         )
 
 
-def torch_dataset(frames, vocabulary, train: bool):
+def torch_dataset(frames, vocabulary, train: bool, source_dropout: float = 0.0):
     """Wrap :class:`SatelliteFrameDataset` as a real ``torch.utils.data.Dataset``."""
     from torch.utils.data import Dataset
 
     class _Wrapped(SatelliteFrameDataset, Dataset):
         pass
 
-    return _Wrapped(frames, vocabulary, train)
+    return _Wrapped(frames, vocabulary, train, source_dropout=source_dropout)
