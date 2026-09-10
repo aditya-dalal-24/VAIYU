@@ -23,7 +23,7 @@ Companion documents, all in `ai-service/`:
 
 - **Tests:** 232 passing (`python -m pytest`, 14 test files).
 - **Contract check:** 46/46 passing against the live service (§9).
-- **Git:** 8 local commits, **not pushed** (§3).
+- **Git:** the 8 AI commits listed in §3, plus handoff-doc commits, are all local and **not pushed**.
 
 ---
 
