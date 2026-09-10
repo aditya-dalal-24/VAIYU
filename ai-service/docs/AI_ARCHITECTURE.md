@@ -413,6 +413,88 @@ everything because `STABLE` is the commonest class.
 
 ---
 
+## 10b. Live check against a real storm
+
+Held-out evaluation answers "how does the model do across many storms".
+`evaluation/live_check.py` answers a narrower, complementary question: does the
+*deployed service*, on one specific real storm, produce a forecast matching what
+that storm then did. It exercises the whole path — fetch, feature construction,
+scaling, checkpoint load, inference, response shape — against ground truth the
+model was never given.
+
+```
+.venv/Scripts/python evaluation/live_check.py --storm ep142026 --hold-back 12
+```
+
+Two properties make it a test rather than a demonstration:
+
+- **The track is cut.** Fixes at and after the cut are withheld from the request
+  and used only to score. `preprocessing.atcf.build_request(..., up_to_index=)`
+  enforces this, and a test asserts no withheld timestamp appears in the payload.
+- **The storm is checked against the training archive.** Scoring a model on a
+  storm it trained on produces excellent, meaningless numbers. ATCF and IBTrACS
+  identifiers do not match, so `training_overlap()` matches on space and time
+  (±3°, ±12 h) instead of names, and the tool refuses to score a matched storm
+  unless `--allow-seen` is passed.
+
+That second guard exists because it was needed: an early live check reported
+strong errors on a storm that turned out to be in the training split, and the
+numbers had to be retracted. The check is deliberately biased toward false
+positives — a warning on a clean storm costs a second look, a miss invalidates
+the whole result.
+
+One storm is an anecdote. Read the output as an end-to-end check of the deployed
+path, never as a measure of forecast skill.
+
+---
+
+## 10c. Live track sources — what is actually reachable
+
+`preprocessing/atcf.py` parses the ATCF b-deck format, which every operational
+centre publishes best tracks in. The format is identical across basins, so the
+parser serves whichever source is open. Availability verified from this
+environment:
+
+| Source | Coverage | Status |
+| --- | --- | --- |
+| `ftp.nhc.noaa.gov/atcf/btk/` | `al`, `cp`, `ep` | **Reachable**, no key |
+| JTWC (`metoc.navy.mil`) | `io`, `sh`, `wp` | 403 Forbidden |
+| IMD (`rsmcnewdelhi.imd.gov.in`) | North Indian Ocean | Unreachable |
+| MOSDAC (ISRO) | INSAT-3D, NIO cyclone products | Requires an account |
+| Bhuvan (ISRO Geoportal) | — | **No cyclone data** |
+
+**No North Indian Ocean live track source is currently open.** That is a data
+access problem, not a code one — the parser handles an `io`/`wp` b-deck the
+moment one can be fetched.
+
+**Bhuvan** was checked directly and does not carry cyclone data at all: its API
+catalogue is postal/hospital lookup, village geocoding, LULC 50K/250K, shortest
+path and geoid conversion. Its access token also expires daily, so it could not
+back an unattended pipeline even if the data existed. **MOSDAC** is the ISRO
+service that does hold relevant products ("Sat. Based Cyclone Obser. and
+Realtime Pred. over IO", plus INSAT-3D imagery), but it requires a registered
+account — that credential has to come from the project owner.
+
+### On `tropycal`
+
+`tropycal` is the obvious open-source candidate for this job and was evaluated
+against the direct parser. It is **not a dependency**, for three measured
+reasons:
+
+- Its one differentiator over NHC — a JTWC path covering the Indian Ocean — also
+  returns **403** from here, so it adds no basin coverage.
+- It cannot import without `cartopy`, pulling in `pyproj` and `shapely`, and
+  takes ~40 s to initialise its dataset object.
+- On the NHC path it surfaces exactly the storms a direct fetch already finds.
+
+That is a large plotting-and-analysis stack, and a 40 s startup, to duplicate a
+~60-line parser. If it is ever wanted for exploratory analysis or figures, it
+belongs in a separate data-prep requirements file, not in the service's
+`requirements.txt` — the service must stay deployable without a geospatial
+toolchain.
+
+---
+
 ## 11. Checkpoints and the registry
 
 A checkpoint contains weights, the architecture config, the fitted scaler, the
@@ -533,7 +615,11 @@ Covers the API and its status codes, request validation, model shapes and
 forward passes, checkpoint round-trips and rejection of corrupt or mismatched
 files, every registry state, partial analysis, temporal safety, split leakage,
 and one end-to-end run from synthetic data through training to a served
-prediction.
+prediction. ATCF parsing is covered too, including the two traps that would
+corrupt features silently — each fix repeating once per wind-radii threshold,
+and a missing pressure encoded as `0` rather than blank — along with the
+live-check guards: that the withheld part of a track never reaches the request,
+and that a storm present in the training archive is detected.
 
 That end-to-end test is what makes "training-ready" verifiable rather than
 asserted. It uses synthetic data and two epochs, and asserts only plumbing —
