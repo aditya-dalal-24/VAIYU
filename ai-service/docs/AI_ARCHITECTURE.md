@@ -443,6 +443,13 @@ numbers had to be retracted. The check is deliberately biased toward false
 positives — a warning on a clean storm costs a second look, a miss invalidates
 the whole result.
 
+Every position error is printed against two baselines -- persistence (the storm
+stops) and linear extrapolation (the last motion continues) -- because an error
+in isolation is unreadable: 126 km sounds good or bad depending on nothing.
+Intensity errors carry a persistence reference for the same reason. When linear
+extrapolation wins, the tool says so explicitly rather than leaving the reader
+to notice.
+
 One storm is an anecdote. Read the output as an end-to-end check of the deployed
 path, never as a measure of forecast skill.
 

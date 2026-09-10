@@ -13,6 +13,7 @@ import pytest
 
 from evaluation.live_check import (
     VERIFY_TOLERANCE_HOURS,
+    baselines,
     choose_cut,
     great_circle_km,
     verifying_fix,
@@ -113,3 +114,64 @@ class TestVerifyingFix:
 
     def test_no_future_fixes_means_no_verification(self):
         assert verifying_fix([], datetime(2026, 9, 1)) is None
+
+
+class TestBaselines:
+    """The two references that make a position error readable.
+
+    Without them a "58 km mean error" reads as good or bad depending on nothing,
+    and a model that has learned only to continue the last heading looks skilful.
+    """
+
+    def test_persistence_is_the_current_position(self):
+        fixes = track(4)
+        persistence, _ = baselines(fixes, hours=24.0)
+
+        assert persistence == (fixes[-1].latitude, fixes[-1].longitude)
+
+    def test_persistence_does_not_depend_on_the_horizon(self):
+        fixes = track(4)
+
+        assert baselines(fixes, 6.0)[0] == baselines(fixes, 48.0)[0]
+
+    def test_linear_continues_the_last_observed_motion(self):
+        # track() steps +0.5 lat and -0.5 lon every 6 h.
+        fixes = track(4)
+        _, linear = baselines(fixes, hours=12.0)
+
+        assert linear[0] == pytest.approx(fixes[-1].latitude + 1.0)
+        assert linear[1] == pytest.approx(fixes[-1].longitude - 1.0)
+
+    def test_linear_uses_only_the_last_leg_not_the_whole_track(self):
+        """A track that turns must not have the turn averaged away."""
+        fixes = track(3)
+        turned = fixes[:-1] + [
+            AtcfFix(
+                timestamp=fixes[-1].timestamp,
+                latitude=fixes[-2].latitude - 1.0,  # reversed direction
+                longitude=fixes[-2].longitude,
+                wind_speed_kph=100.0,
+                pressure_hpa=980.0,
+            )
+        ]
+        _, linear = baselines(turned, hours=6.0)
+
+        assert linear[0] == pytest.approx(turned[-1].latitude - 1.0)
+
+    def test_a_single_fix_has_no_linear_baseline(self):
+        persistence, linear = baselines(track(1), hours=6.0)
+
+        assert linear is None
+        assert persistence == (20.0, -80.0)
+
+    def test_duplicate_timestamps_do_not_divide_by_zero(self):
+        fixes = track(2)
+        stalled = [fixes[0], AtcfFix(
+            timestamp=fixes[0].timestamp,
+            latitude=fixes[1].latitude,
+            longitude=fixes[1].longitude,
+            wind_speed_kph=100.0,
+            pressure_hpa=980.0,
+        )]
+
+        assert baselines(stalled, hours=6.0)[1] is None

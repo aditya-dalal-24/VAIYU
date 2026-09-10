@@ -73,6 +73,35 @@ def verifying_fix(future: Sequence[AtcfFix], target) -> Optional[AtcfFix]:
     return best
 
 
+def baselines(history: Sequence[AtcfFix], hours: float):
+    """Where persistence and linear extrapolation put the storm at ``hours``.
+
+    A position error in isolation is unreadable -- 126 km sounds either good or
+    bad depending on nothing. Persistence (the storm stops) and linear
+    extrapolation (the last motion continues) are the two references that give
+    it meaning. Beating persistence is a low bar; beating linear extrapolation
+    is the result that indicates the model learned how tracks curve.
+    """
+    current = history[-1]
+    persistence = (current.latitude, current.longitude)
+
+    if len(history) < 2:
+        return persistence, None
+
+    previous = history[-2]
+    span = (current.timestamp - previous.timestamp).total_seconds() / 3600.0
+    if span <= 0:
+        return persistence, None
+
+    lat_rate = (current.latitude - previous.latitude) / span
+    lon_rate = (current.longitude - previous.longitude) / span
+    linear = (
+        current.latitude + lat_rate * hours,
+        current.longitude + lon_rate * hours,
+    )
+    return persistence, linear
+
+
 def main(args) -> int:
     try:
         fixes = fetch_deck(args.storm)
@@ -112,7 +141,8 @@ def main(args) -> int:
         )
         return 1
 
-    current = fixes[cut - 1]
+    history = fixes[:cut]
+    current = history[-1]
     future = fixes[cut:]
 
     print(
@@ -149,25 +179,65 @@ def main(args) -> int:
             f"\n  TRAJECTORY  {model.get('name')} v{model.get('version')}"
             f"  (skill {trajectory.get('confidence')})"
         )
+        print(
+            f"    {'horizon':>7}  {'model':>9}  {'persistence':>11}  {'linear':>9}"
+        )
         errors: List[float] = []
+        persistence_errors: List[float] = []
+        linear_errors: List[float] = []
+
         for position in trajectory.get("predictedPositions", []):
-            target = current.timestamp + timedelta(hours=position["forecastHours"])
+            hours = position["forecastHours"]
+            target = current.timestamp + timedelta(hours=hours)
             truth = verifying_fix(future, target)
             if truth is None:
-                print(f"    +{position['forecastHours']:>3}h   no verifying fix yet")
+                print(f"    {'+%dh' % hours:>7}  no verifying fix yet")
                 continue
+
             error = great_circle_km(
                 truth.latitude, truth.longitude,
                 position["latitude"], position["longitude"],
             )
             errors.append(error)
-            print(
-                f"    +{position['forecastHours']:>3}h   forecast "
-                f"{position['latitude']:6.2f},{position['longitude']:8.2f}   actual "
-                f"{truth.latitude:6.2f},{truth.longitude:8.2f}   error {error:6.0f} km"
+
+            persistence, linear = baselines(history, hours)
+            persistence_error = great_circle_km(
+                truth.latitude, truth.longitude, *persistence
             )
+            persistence_errors.append(persistence_error)
+
+            if linear is None:
+                linear_text = "        -"
+            else:
+                linear_error = great_circle_km(
+                    truth.latitude, truth.longitude, *linear
+                )
+                linear_errors.append(linear_error)
+                linear_text = f"{linear_error:6.0f} km"
+
+            print(
+                f"    {'+%dh' % hours:>7}  {error:6.0f} km  "
+                f"{persistence_error:8.0f} km  {linear_text}"
+            )
+
         if errors:
-            print(f"    mean position error: {sum(errors) / len(errors):.0f} km")
+            mean = lambda values: sum(values) / len(values)  # noqa: E731
+            linear_mean = (
+                f"{mean(linear_errors):6.0f} km" if linear_errors else "        -"
+            )
+            print(
+                f"    {'mean':>7}  {mean(errors):6.0f} km  "
+                f"{mean(persistence_errors):8.0f} km  {linear_mean}"
+            )
+            if linear_errors and mean(errors) > mean(linear_errors):
+                print(
+                    "    NOTE: linear extrapolation beat the model here. On a "
+                    "storm moving in a"
+                )
+                print(
+                    "          straight line that is expected; on a recurving "
+                    "one it would not be."
+                )
 
     intensity = result.get("intensityPrediction") or {}
     if intensity.get("status") == "COMPLETED":
@@ -187,6 +257,9 @@ def main(args) -> int:
                 f"actual {truth.wind_speed_kph:6.1f} kph {truth.pressure_hpa:6.1f} hPa   "
                 f"error {abs(point['windSpeedKph'] - truth.wind_speed_kph):5.1f} kph / "
                 f"{abs(point['pressureHpa'] - truth.pressure_hpa):4.1f} hPa"
+                f"   (persistence "
+                f"{abs(current.wind_speed_kph - truth.wind_speed_kph):5.1f} kph / "
+                f"{abs(current.pressure_hpa - truth.pressure_hpa):4.1f} hPa)"
             )
 
     for key, label in (
