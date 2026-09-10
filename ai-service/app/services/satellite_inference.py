@@ -144,5 +144,10 @@ def run_satellite(
             name=checkpoint.model_name,
             version=checkpoint.model_version,
             inference_time_ms=int((time.perf_counter() - started) * 1000),
+            training_dataset_version=checkpoint.dataset_version,
+            # For the vision model the image spec plays the role the feature
+            # set plays for the forecasters: it is what the model was fitted
+            # against and what a mismatch would invalidate.
+            feature_set_version=checkpoint.image_spec_version,
         ),
     )

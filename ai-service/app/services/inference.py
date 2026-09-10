@@ -118,10 +118,15 @@ def _tensors(entry: LoadedModel, steps, mask, environment):
 
 
 def _model_info(entry: LoadedModel, started: float) -> ModelInfo:
+    checkpoint = entry.checkpoint
     return ModelInfo(
-        name=entry.checkpoint.model_name,
-        version=entry.checkpoint.model_version,
+        name=checkpoint.model_name,
+        version=checkpoint.model_version,
         inference_time_ms=int((time.perf_counter() - started) * 1000),
+        # Section 15 optional metadata. Absent when the checkpoint did not
+        # record a dataset version, rather than filled with a placeholder.
+        training_dataset_version=checkpoint.dataset_version,
+        feature_set_version=checkpoint.feature_set_version,
     )
 
 

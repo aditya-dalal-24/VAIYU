@@ -125,11 +125,20 @@ class CycloneAnalysisRequest(ContractModel):
 
 
 class ModelInfo(ContractModel):
-    """Contract section 15."""
+    """Contract section 15.
+
+    ``inferenceTimeMs``, ``trainingDatasetVersion`` and ``featureSetVersion``
+    are the optional metadata section 15 names. The last two matter when
+    training and serving happen on different machines: they say which data and
+    which feature layout produced the prediction, which is otherwise
+    guesswork once a checkpoint has been copied between hosts.
+    """
 
     name: str
     version: str
     inference_time_ms: Optional[int] = None
+    training_dataset_version: Optional[str] = None
+    feature_set_version: Optional[str] = None
 
 
 class AnalysisBlock(ContractModel):
