@@ -1,4 +1,4 @@
-"""CycloVision AI inference service.
+"""VAIYU AI inference service.
 
 An internal service: the React frontend never calls it directly, Spring Boot
 does (contract section 1). All endpoints live under /api/v1 (section 2).
@@ -38,10 +38,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="CycloVision AI Service",
+    title="VAIYU AI Service",
     description=(
         "Internal AI/ML inference service. See "
-        "'CycloVision AI Service Contract.txt' for the authoritative contract."
+        "'VAIYU AI Service Contract.txt' for the authoritative contract."
     ),
     version=SERVICE_VERSION,
 )

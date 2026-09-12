@@ -137,7 +137,7 @@ def fetch_deck(storm_id: str, url_template: str = NHC_BTK_URL) -> List[AtcfFix]:
 
     try:
         request = urllib.request.Request(
-            url, headers={"User-Agent": "cyclovision-ai-service"}
+            url, headers={"User-Agent": "vaiyu-ai-service"}
         )
         with urllib.request.urlopen(request, timeout=FETCH_TIMEOUT_SECONDS) as response:
             payload = response.read(MAX_DECK_BYTES)

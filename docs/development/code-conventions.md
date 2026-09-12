@@ -1,4 +1,4 @@
-# CycloVision Code Conventions
+# VAIYU Code Conventions
 
 ## Frontend Conventions
 - **File Naming**: Use PascalCase for React components (e.g., `CycloneMap.tsx`), camelCase for utility functions and hooks (e.g., `useFetchData.ts`).

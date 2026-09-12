@@ -87,7 +87,7 @@ class TestHealthEndpoint:
 
         assert response.status_code == 200
         assert payload["status"] == "UP"
-        assert payload["service"] == "cyclovision-ai-service"
+        assert payload["service"] == "vaiyu-ai-service"
         assert payload["version"] == "1.0.0"
 
     def test_service_is_up_even_with_no_models(self, client, untrained_registry):

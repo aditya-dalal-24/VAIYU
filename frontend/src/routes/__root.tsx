@@ -19,7 +19,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { name: "color-scheme", content: "dark" },
-      { title: "CycloVision — Cyclone Intelligence Console" },
+      { title: "VAIYU — Cyclone Intelligence Console" },
       {
         name: "description",
         content:

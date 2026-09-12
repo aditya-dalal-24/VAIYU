@@ -8,11 +8,11 @@
 		<version>3.2.4</version>
 		<relativePath/>
 	</parent>
-	<groupId>com.cyclovision</groupId>
-	<artifactId>backend</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-	<name>backend</name>
-	<description>CycloVision Backend Service</description>
+	<groupId>com.vaiyu</groupId>
+	<artifactId>vaiyu-backend</artifactId>
+	<version>0.1.0</version>
+	<name>vaiyu-backend</name>
+	<description>VAIYU backend: cyclone archive, AI orchestration and public API</description>
 	<properties>
 		<java.version>17</java.version>
 	</properties>

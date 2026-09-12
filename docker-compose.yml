@@ -3,9 +3,9 @@ version: '3.8'
 services:
   postgres:
     image: postgis/postgis:16-3.4
-    container_name: cyclovision-db
+    container_name: vaiyu-db
     environment:
-      POSTGRES_DB: cyclovision
+      POSTGRES_DB: vaiyu
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: changeme
     ports:
@@ -13,17 +13,17 @@ services:
       
   ai-service:
     build: ./ai-service
-    container_name: cyclovision-ai
+    container_name: vaiyu-ai
     ports:
       - "8000:8000"
 
   backend:
     build: ./backend
-    container_name: cyclovision-backend
+    container_name: vaiyu-backend
     ports:
       - "8080:8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cyclovision
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/vaiyu
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: changeme
       AI_SERVICE_URL: http://ai-service:8000
@@ -33,7 +33,7 @@ services:
 
   frontend:
     build: ./frontend
-    container_name: cyclovision-frontend
+    container_name: vaiyu-frontend
     ports:
       - "3000:80"
     depends_on:

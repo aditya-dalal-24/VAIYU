@@ -10,7 +10,7 @@ from registry.registry import get_registry
 
 router = APIRouter(prefix="/api/v1", tags=["health"])
 
-SERVICE_NAME = "cyclovision-ai-service"
+SERVICE_NAME = "vaiyu-ai-service"
 SERVICE_VERSION = "1.0.0"
 
 

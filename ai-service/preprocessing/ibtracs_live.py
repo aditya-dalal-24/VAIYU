@@ -216,7 +216,7 @@ def fetch_active_storms(
     """
     try:
         request = urllib.request.Request(
-            url, headers={"User-Agent": "cyclovision-ai-service"}
+            url, headers={"User-Agent": "vaiyu-ai-service"}
         )
         with urllib.request.urlopen(request, timeout=FETCH_TIMEOUT_SECONDS) as response:
             payload = response.read(MAX_BYTES)

@@ -1,4 +1,4 @@
-# CycloVision Module Ownership
+# VAIYU Module Ownership
 
 To reduce merge conflicts and streamline development, the project is divided into primary ownership areas. Collaboration across areas is allowed and encouraged, provided it is properly coordinated.
 

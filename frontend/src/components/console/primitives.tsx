@@ -88,7 +88,15 @@ export function Panel({
           {action}
         </header>
       ) : null}
-      <div className={cn("min-h-0 flex-1 overflow-auto", bodyClassName)}>{children}</div>
+      {/*
+        `grow` rather than `flex-1`: flex-1 also sets flex-basis to 0, which
+        silently defeats a caller's `bodyClassName="h-[420px]"` whenever the
+        section's own height is only a min-height — the body collapses to zero
+        and a fixed-height map renders as an empty rectangle. Growing from an
+        auto basis honours an explicit height and still fills the leftover
+        space when the section is stretched by its grid row.
+      */}
+      <div className={cn("min-h-0 grow overflow-auto", bodyClassName)}>{children}</div>
     </section>
   );
 }

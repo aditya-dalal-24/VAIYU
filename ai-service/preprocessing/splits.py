@@ -42,7 +42,7 @@ def split_by_cyclone(
     cyclone_ids: Iterable[str],
     train_fraction: float = DEFAULT_TRAIN_FRACTION,
     validation_fraction: float = DEFAULT_VALIDATION_FRACTION,
-    salt: str = "cyclovision",
+    salt: str = "vaiyu",
 ) -> Dict[str, str]:
     """Assign each cyclone id to ``train``, ``validation`` or ``test``.
 

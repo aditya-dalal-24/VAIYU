@@ -16,8 +16,10 @@ import type {
   SystemStatus,
 } from "./types";
 
+// 8081 matches the documented default in the README; 8080 is left free
+// because it is so often already taken by another service.
 const RAW_BASE =
-  (import.meta.env["VITE_API_BASE_URL"] as string | undefined) ?? "http://localhost:8080";
+  (import.meta.env["VITE_API_BASE_URL"] as string | undefined) ?? "http://localhost:8081";
 
 export const API_BASE = RAW_BASE.replace(/\/+$/, "").replace(/\/api$/, "");
 
@@ -154,8 +156,13 @@ export const api = {
       { method: "POST" },
     ),
 
+  /**
+   * The stored run for a storm, or null when it has never been forecast.
+   * The backend answers 204 for that case, which `request` maps to null; a
+   * 404 here means the storm id itself is unknown and stays an error.
+   */
   latestForecast: (id: string) =>
-    request<PredictionRun>(`/api/v1/cyclones/${id}/forecast/latest`),
+    request<PredictionRun | null>(`/api/v1/cyclones/${id}/forecast/latest`),
 
   forecastHistory: (id: string, limit = 10) =>
     request<PredictionRun[]>(`/api/v1/cyclones/${id}/forecast/history${query({ limit })}`),

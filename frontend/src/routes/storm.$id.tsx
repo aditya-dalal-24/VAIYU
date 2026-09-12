@@ -21,8 +21,7 @@ import {
   Skeleton,
   StatusChip,
 } from "@/components/console/primitives";
-import { StormMap } from "@/components/map/StormMap";
-import { ClientOnly } from "@/components/ui/client-only";
+import { LazyStormMap } from "@/components/map/LazyStormMap";
 import {
   categoryColorForWind,
   fmtCoords,
@@ -140,15 +139,13 @@ function StormProfile() {
             {observations.length === 0 ? (
               <Empty title="No observations" detail="This storm has no stored track." />
             ) : (
-              <ClientOnly fallback={<div className="h-full w-full graticule" />}>
-                <StormMap
+              <LazyStormMap
                   observations={observations}
                   forecast={run?.trajectory.points ?? []}
                   analogue={run?.analogues.points ?? []}
                   baseTime={run?.baseObservationAt ?? null}
                 />
-              </ClientOnly>
-            )}
+              )}
           </Panel>
 
           <div className="space-y-2">

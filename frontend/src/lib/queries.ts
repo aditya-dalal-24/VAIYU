@@ -80,22 +80,16 @@ export function useTrack(id: string | undefined) {
 }
 
 /**
- * The most recent stored run for a storm. A 404 means no forecast has been run
- * yet, which is a normal state and must not surface as an error.
+ * The most recent stored run for a storm, or null when none has been made —
+ * a normal state for almost every storm in the archive, so it must not surface
+ * as an error.
  */
 export function useLatestForecast(id: string | undefined) {
   return useQuery({
     queryKey: keys.latestForecast(id ?? "none"),
-    queryFn: async () => {
-      try {
-        return await api.latestForecast(id as string);
-      } catch (error) {
-        if (error && typeof error === "object" && "isNotFound" in error) {
-          if ((error as { isNotFound: boolean }).isNotFound) return null;
-        }
-        throw error;
-      }
-    },
+    // 204 (no run yet) arrives as null; a 404 means the storm id is unknown
+    // and is left to surface as an error.
+    queryFn: () => api.latestForecast(id as string),
     enabled: Boolean(id),
     staleTime: Infinity,
     refetchOnWindowFocus: false,

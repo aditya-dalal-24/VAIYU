@@ -151,11 +151,17 @@ export function StormMap({
         attributionControl
         worldCopyJump
       >
+        {/*
+         * Esri Dark Gray Canvas. CARTO's dark_all basemap now stamps
+         * "API KEY REQUIRED" across every tile it serves anonymously, which
+         * left the map blank grey behind the tracks. This service is keyless,
+         * and its muted land keeps the three provenance hues legible.
+         * The axis order is ArcGIS's {z}/{y}/{x}, not OSM's {z}/{x}/{y}.
+         */}
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          subdomains={["a", "b", "c", "d"]}
-          maxZoom={19}
+          url="https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+          attribution="Esri, HERE, Garmin, &copy; OpenStreetMap contributors"
+          maxZoom={16}
         />
 
         <FitBounds bounds={bounds} dependency={boundsKey} />

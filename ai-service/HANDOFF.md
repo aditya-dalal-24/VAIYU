@@ -1,4 +1,4 @@
-# CycloVision AI Service — Handoff
+# VAIYU AI Service — Handoff
 
 State as of **2026-09-10**, branch `ad_model`. Written for the next device and the
 next AI agent. Every figure below was measured or read from disk in the session
@@ -6,7 +6,7 @@ that produced this file; nothing is projected. Where something is unknown it say
 so.
 
 Companion documents, all in `ai-service/`:
-**`CycloVision AI Service Contract.txt`** (authoritative spec) ·
+**`VAIYU AI Service Contract.txt`** (authoritative spec) ·
 **`README.md`** (runbook) · **`docs/AI_ARCHITECTURE.md`** (full design rationale).
 
 ---
@@ -660,7 +660,7 @@ React (map / timeline)
 - `pytest.ini` caps temporary-directory retention, because the C: drive filled
   up during testing.
 - The repo-root `docs/ai/` path mentioned in an early prompt is not where the
-  contract lives. It is `ai-service/CycloVision AI Service Contract.txt` (`.txt`).
+  contract lives. It is `ai-service/VAIYU AI Service Contract.txt` (`.txt`).
 - An earlier backend fix set `spring.flyway.enabled=false` (Postgres DDL against
   H2). An `application.yml` rename was reverted as unnecessary. That is backend
   history, recorded only for context.

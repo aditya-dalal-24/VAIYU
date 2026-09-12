@@ -36,7 +36,7 @@ function TopRail() {
         <Link to="/" className="flex items-center gap-2">
           <Mark />
           <span className="font-display text-[0.8125rem] font-semibold tracking-tight">
-            CycloVision
+            VAIYU
           </span>
           <span className="label-xs hidden sm:inline">Cyclone Intelligence</span>
         </Link>

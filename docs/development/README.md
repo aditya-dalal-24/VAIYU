@@ -1,4 +1,4 @@
-# CycloVision Development Guide
+# VAIYU Development Guide
 
 ## Environment Configuration
 To run the backend locally, you must configure your environment variables. 
@@ -7,7 +7,7 @@ To run the backend locally, you must configure your environment variables.
 ### A. The `.env.example` Template
 1. Copy `backend/.env.example` to a new file named `backend/.env` (which is git-ignored).
 2. Provide the required Neon PostgreSQL credentials inside your new `.env` file:
-   - `DB_URL`: The JDBC URL for the Neon database (e.g., `jdbc:postgresql://<host>.neon.tech/cyclovision?sslmode=require`)
+   - `DB_URL`: The JDBC URL for the Neon database (e.g., `jdbc:postgresql://<host>.neon.tech/vaiyu?sslmode=require`)
    - `DB_USERNAME`: Your Neon username
    - `DB_PASSWORD`: Your Neon password
 

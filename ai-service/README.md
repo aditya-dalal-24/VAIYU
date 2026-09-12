@@ -1,9 +1,9 @@
-# CycloVision AI Service
+# VAIYU AI Service
 
 Internal AI/ML inference service. Spring Boot is the only intended caller; the
 React frontend never calls this service directly (contract section 1).
 
-The authoritative specification is **`CycloVision AI Service Contract.txt`** in
+The authoritative specification is **`VAIYU AI Service Contract.txt`** in
 this directory. The architecture is documented in **`docs/AI_ARCHITECTURE.md`**,
 and the complete project state for the next machine or agent is in
 **`HANDOFF.md`**.

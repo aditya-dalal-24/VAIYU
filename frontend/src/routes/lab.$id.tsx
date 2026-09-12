@@ -26,9 +26,8 @@ import {
   Skeleton,
 } from "@/components/console/primitives";
 import { ForecastPanel } from "@/components/forecast/ForecastPanel";
-import { StormMap } from "@/components/map/StormMap";
+import { LazyStormMap } from "@/components/map/LazyStormMap";
 import { TrackTimeline } from "@/components/timeline/TrackTimeline";
-import { ClientOnly } from "@/components/ui/client-only";
 import {
   ABSENT,
   fmtCoords,
@@ -170,8 +169,7 @@ function PredictionLab() {
               {observations.length === 0 ? (
                 <Empty title="No track" />
               ) : (
-                <ClientOnly fallback={<div className="h-full w-full graticule" />}>
-                  <StormMap
+                <LazyStormMap
                     observations={observations}
                     forecast={runMatchesBase ? (run?.trajectory.points ?? []) : []}
                     analogue={runMatchesBase ? (run?.analogues.points ?? []) : []}
@@ -183,7 +181,6 @@ function PredictionLab() {
                     }}
                     hideFuture={!revealed}
                   />
-                </ClientOnly>
               )}
             </Panel>
 

@@ -86,6 +86,11 @@ ai-service/data/raw/
 ai-service/data/processed/
 ai-service/trained_models/
 
+# Local run logs and the throwaway browser-verification script, which hardcodes
+# absolute output paths for this machine.
+backend/run.log
+frontend/vaiyu-shot.mjs
+
 # ==================================================
 # EXCEPTIONS (DO NOT IGNORE)
 # ==================================================

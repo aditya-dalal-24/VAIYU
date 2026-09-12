@@ -1,4 +1,4 @@
-# CycloVision System Architecture
+# VAIYU System Architecture
 
 ## Architecture Rules
 

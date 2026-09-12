@@ -1,6 +1,6 @@
-# CycloVision AI Service — Architecture
+# VAIYU AI Service — Architecture
 
-The authoritative specification is `CycloVision AI Service Contract.txt` in the
+The authoritative specification is `VAIYU AI Service Contract.txt` in the
 service root. Where this document and the contract disagree, the contract wins.
 
 Status of every component is marked:

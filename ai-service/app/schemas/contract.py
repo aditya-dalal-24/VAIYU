@@ -1,4 +1,4 @@
-"""Pydantic schemas for the CycloVision AI Service Contract.
+"""Pydantic schemas for the VAIYU AI Service Contract.
 
 Field names and shapes follow the contract document exactly (sections 4-14).
 The wire format is camelCase; Python attributes stay snake_case, bridged by a

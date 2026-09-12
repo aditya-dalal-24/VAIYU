@@ -16,9 +16,8 @@ import { useEffect, useMemo, useState } from "react";
 import { StormPicker } from "@/components/console/StormPicker";
 import { Button, Empty, Metric, Panel, Provenance, Skeleton } from "@/components/console/primitives";
 import { ForecastPanel } from "@/components/forecast/ForecastPanel";
-import { StormMap } from "@/components/map/StormMap";
+import { LazyStormMap } from "@/components/map/LazyStormMap";
 import { TrackTimeline } from "@/components/timeline/TrackTimeline";
-import { ClientOnly } from "@/components/ui/client-only";
 import {
   categoryColorForWind,
   fmtCoords,
@@ -99,8 +98,7 @@ function MissionControl() {
               detail="This storm has no stored observations, so there is nothing to map."
             />
           ) : (
-            <ClientOnly fallback={<div className="h-full w-full graticule" />}>
-              <StormMap
+            <LazyStormMap
                 observations={observations}
                 forecast={run?.trajectory.points ?? []}
                 analogue={run?.analogues.points ?? []}
@@ -109,7 +107,6 @@ function MissionControl() {
                 onSelect={onSelectFix}
                 hideFuture={replay}
               />
-            </ClientOnly>
           )}
 
           {/* Storm identity, docked top-left over the map. */}

@@ -7,10 +7,10 @@ server:
 
 spring:
   application:
-    name: cyclovision-backend
+    name: vaiyu-backend
 
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/cyclovision}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/vaiyu}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:changeme}
     driver-class-name: org.postgresql.Driver
@@ -59,7 +59,7 @@ ai:
     satellite-timeout: 60s
     health-timeout: 3s
 
-cyclovision:
+vaiyu:
   # Where uploaded satellite frames are served from. The AI service fetches
   # imagery by URL, so this must be reachable from it.
   public-base-url: ${PUBLIC_BASE_URL:http://localhost:8080}
@@ -81,4 +81,4 @@ management:
 
 logging:
   level:
-    com.cyclovision: INFO
+    com.vaiyu: INFO
