@@ -10,42 +10,71 @@
 6. FastAPI remains focused solely on AI/ML processing.
 7. Database access is handled entirely through Spring Boot.
 
+Rule 3 is the one that shapes the rest. Because the browser cannot reach the AI
+service, every model output must pass through Spring Boot, which is therefore
+the only place that decides what is fit to show, records what was asked and
+persists the answer. The AI service can be restarted, retrained or stopped
+without the console losing its history.
+
 ## Core Flow
 
 ```text
-React Frontend
-        ↓ REST API
-Spring Boot Backend
-        ↓              ↓
-Neon PostgreSQL      FastAPI AI Service
+React console (TanStack Start)         :5173
+        ↓ REST
+Spring Boot 3.2.4 / Java 17            :8081
+        ↓ JPA + Flyway      ↓ RestClient
+PostgreSQL "vaiyu"          FastAPI AI service      :8000
+                                    ↓
+                            PyTorch checkpoints
+                              trajectory, intensity, analogue index
 ```
 
-## Future Intended Flows (Not yet implemented)
+## Data ingestion
 
-### Data Ingestion Flow
+Implemented. `POST /api/internal/ingest/ibtracs`.
+
 ```text
-External Data Sources
-        ↓
-Data Ingestion
-        ↓
-Database
-        ↓
-Spring Boot
-        ↓
+IBTrACS v04r01 (NOAA/NCEI)
+        ↓ ai-service/training/prepare_ibtracs.py
+data/processed/observations.csv
+        ↓ IbtracsImporter (JdbcTemplate batch upsert)
+PostgreSQL
+        ↓ CycloneQueryService
 Frontend
 ```
 
-### Prediction Flow
+The CSV is the same table the models were trained on, so what the models are
+asked at inference matches what they learned from. Upserts key on
+`(external_source, external_id)`, which makes re-running after a retrain safe.
+
+## Prediction
+
+Implemented. `POST /api/v1/cyclones/{id}/forecast`.
+
 ```text
-Cyclone Observations
-        ↓
-Spring Boot
-        ↓
-FastAPI AI
-        ↓
-Prediction
-        ↓
-Spring Boot
-        ↓
+Stored observations
+        ↓ AiRequestFactory: synoptic fixes at or before the base time,
+        ↓ 3 minimum, 12 maximum, nothing after the base fix
+FastAPI AI service
+        ↓ trajectory / intensity / analogue inference
+PredictionRun + track, intensity and analogue points
+        ↓ persisted with the base fix and the observation ids used
 Frontend
 ```
+
+Bounding the input at the base fix is what makes a stored run verifiable
+afterwards: the run records which fixes it saw, so a reader can confirm the
+forecast predates the outcome it is being scored against.
+
+Status codes carry meaning and the console depends on them: 422 the storm's
+data cannot support a forecast, 503 the AI service or model is unavailable, 204
+no run has been made for this storm yet, 404 no such storm.
+
+## Not implemented
+
+- Satellite inference has an architecture, a training pipeline and source
+  conditioning, but no checkpoint for the current architecture, so it reports
+  `NOT_AVAILABLE` with a reason.
+- Environmental fields (sea-surface temperature, shear, humidity) are accepted
+  by the model interface but no such data is joined to these tracks, so the
+  backend sends none and the models run on track history alone.
