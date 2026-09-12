@@ -1,0 +1,9 @@
+# target/ holds a previous build's classes and jars; the image builds its own,
+# and a stale target/classes/application.properties has overridden the real
+# configuration in this project before.
+target/
+.env
+*.log
+.git/
+.gitignore
+data/

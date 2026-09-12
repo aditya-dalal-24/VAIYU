@@ -1,0 +1,16 @@
+# Keep the build context small and reproducible. Without this the context
+# includes the 138 MB IBTrACS export, a ~2 GB virtualenv and the checkpoints,
+# none of which belong in an image: data and checkpoints are mounted, and the
+# venv is rebuilt by pip inside the image.
+.venv/
+venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+data/
+checkpoints/
+trained_models/
+*.log
+.git/
+.gitignore

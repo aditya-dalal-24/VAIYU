@@ -1,0 +1,13 @@
+# node_modules is reinstalled from package-lock.json inside the image, and
+# copying it in would be both slow and wrong: it may hold platform-specific
+# binaries built for Windows.
+node_modules/
+.output/
+.nitro/
+dist/
+.env
+.env.*
+*.log
+.git/
+.gitignore
+vaiyu-shot.mjs

@@ -1,47 +1,106 @@
-# NOTE: this file is aspirational, not working. None of ./backend, ./ai-service
-# or ./frontend contains a Dockerfile, so `docker compose up` fails at the
-# build step. It is kept as the intended shape of a container deployment; the
-# supported way to run VAIYU today is the local setup in the root README.
-version: '3.8'
+# VAIYU, containerised.
+#
+# The one thing to know before running this: the archive and the trained
+# checkpoints are not in the images and are not in the repository. They are
+# mounted from ./ai-service, and both are produced by the AI service's own
+# pipeline (see ai-service/README.md, "Training from scratch"). Without them
+# the stack still comes up: the AI service reports every analysis as
+# NOT_AVAILABLE with a reason, and the archive is empty until ingested.
+#
+#   docker compose up --build
+#   curl -X POST http://localhost:8081/api/internal/ingest/ibtracs
+#   open http://localhost:5173
+#
+# The default database password below is a placeholder for local use. Set
+# VAIYU_DB_PASSWORD before deploying this anywhere that matters.
+
+name: vaiyu
 
 services:
   postgres:
-    image: postgis/postgis:16-3.4
+    # Plain Postgres, not PostGIS: nothing in the schema uses a geometry type,
+    # and the PostGIS image is several times the size.
+    image: postgres:16-alpine
     container_name: vaiyu-db
     environment:
       POSTGRES_DB: vaiyu
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: changeme
+      POSTGRES_PASSWORD: ${VAIYU_DB_PASSWORD:-changeme}
+    volumes:
+      - vaiyu-db:/var/lib/postgresql/data
     ports:
+      # Exposed so the archive can be inspected with psql from the host.
       - "5432:5432"
-      
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d vaiyu"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
   ai-service:
-    build: ./ai-service
+    build:
+      context: ./ai-service
     container_name: vaiyu-ai
-    ports:
-      - "8000:8000"
+    # Deliberately not published to the host. Spring Boot is the only intended
+    # caller (contract section 1), and the browser must never reach it.
+    expose:
+      - "8000"
+    volumes:
+      # Trained checkpoints, read-only: the service loads them and never
+      # writes them. Retraining happens on the host, then restart this service.
+      - ./ai-service/checkpoints:/app/checkpoints:ro
+    environment:
+      LOG_LEVEL: INFO
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
     container_name: vaiyu-backend
     ports:
       - "8081:8081"
     environment:
       SERVER_PORT: 8081
-      # Where the AI service can fetch uploaded satellite frames from.
-      PUBLIC_BASE_URL: http://backend:8081
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/vaiyu
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: changeme
+      DB_URL: jdbc:postgresql://postgres:5432/vaiyu
+      DB_USERNAME: postgres
+      DB_PASSWORD: ${VAIYU_DB_PASSWORD:-changeme}
       AI_SERVICE_URL: http://ai-service:8000
+      # Where the AI service can fetch an uploaded satellite frame. It must be
+      # resolvable from *that* container, so it is the service name, not
+      # localhost.
+      PUBLIC_BASE_URL: http://backend:8081
+      # The observation table the ingest endpoint reads, at its mounted path.
+      OBSERVATIONS_PATH: /archive/observations.csv
+      SATELLITE_STORAGE_DIR: /app/data/satellite-uploads
+    volumes:
+      # The training pipeline's output table, read-only. Ingest is idempotent,
+      # so re-running it after a retrain is safe.
+      - ./ai-service/data/processed:/archive:ro
+      - vaiyu-satellite-uploads:/app/data/satellite-uploads
     depends_on:
-      - postgres
-      - ai-service
+      postgres:
+        condition: service_healthy
+      ai-service:
+        # Started, not healthy: the backend is designed to run with the AI
+        # service down and to say so, and waiting on it would make a slow
+        # model load look like a broken stack.
+        condition: service_started
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        # Baked into the bundle, and read by the browser, so it has to be the
+        # address the *viewer* can reach — not the compose network's.
+        VITE_API_BASE_URL: ${VAIYU_PUBLIC_API_URL:-http://localhost:8081}
     container_name: vaiyu-frontend
     ports:
-      - "3000:80"
+      # 5173 on the host to match the documented URL; Nitro listens on 3000.
+      - "5173:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_started
+
+volumes:
+  vaiyu-db:
+  vaiyu-satellite-uploads:

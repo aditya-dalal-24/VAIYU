@@ -258,6 +258,51 @@ npm run dev                         # http://localhost:5173
 Set `VITE_API_BASE_URL` in `frontend/.env.local` if the backend is not on
 `http://localhost:8081`.
 
+## Running it in containers
+
+```bash
+docker compose up --build
+curl -X POST http://localhost:8081/api/internal/ingest/ibtracs
+# http://localhost:5173
+```
+
+Four services: `postgres`, `ai-service`, `backend`, `frontend`. Two things are
+mounted rather than baked into images, because both are large, regenerable and
+absent from this repository — the trained checkpoints
+(`ai-service/checkpoints`, read-only) and the observation table
+(`ai-service/data/processed`, read-only). Produce them first with *Training
+from scratch* in [`ai-service/README.md`](ai-service/README.md); without them
+the stack still starts, the archive is simply empty and every analysis reports
+`NOT_AVAILABLE` with a reason.
+
+Three details in there are load-bearing, and each one is a way this could
+silently half-work:
+
+- The **frontend image must be built with `NITRO_PRESET=node-server`**. The
+  project's default preset is `cloudflare-module`, which emits a Workers bundle
+  with no Node server in it, so the image would build and then have nothing to
+  run. The Dockerfile sets it.
+- **`VITE_API_BASE_URL` is baked in at build time** and read by the browser, so
+  it must be an address the *viewer* can reach. `http://backend:8081` resolves
+  inside the compose network and nowhere else. Override with
+  `VAIYU_PUBLIC_API_URL` when deploying.
+- **`PUBLIC_BASE_URL` is the opposite case.** It is the address the AI service
+  uses to fetch an uploaded satellite frame, so it *is* the compose network's
+  `http://backend:8081`.
+
+The AI service is not published to the host. Spring Boot is its only intended
+caller, and the browser must never reach it.
+
+**Status of this, stated plainly:** the compose file is validated and every
+variable in it matches what `application.yml` reads; the jar the backend image
+runs was built and started from its env vars, and `/actuator/health` — the
+container's health check — answered `UP`; the frontend build and its Node
+server were run and serve every route with the map rendering. The **images
+themselves have not been built**, because the machine this was written on has
+no running Docker daemon and 2 GB free on its system drive, and the CPU-only
+PyTorch layer alone needs several. Treat `docker compose up --build` as
+unexercised until someone runs it.
+
 ## The console
 
 | Screen | What it is for |
