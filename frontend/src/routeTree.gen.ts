@@ -10,90 +10,91 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AiRouteImport } from './routes/ai'
-import { Route as AlertsRouteImport } from './routes/alerts'
-import { Route as HistoricalRouteImport } from './routes/historical'
-import { Route as MapRouteImport } from './routes/map'
-import { Route as PredictionsRouteImport } from './routes/predictions'
+import { Route as ExplorerRouteImport } from './routes/explorer'
+import { Route as SatelliteRouteImport } from './routes/satellite'
+import { Route as SystemRouteImport } from './routes/system'
+import { Route as LabIdRouteImport } from './routes/lab.$id'
+import { Route as StormIdRouteImport } from './routes/storm.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AiRoute = AiRouteImport.update({
-  id: '/ai',
-  path: '/ai',
+const ExplorerRoute = ExplorerRouteImport.update({
+  id: '/explorer',
+  path: '/explorer',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AlertsRoute = AlertsRouteImport.update({
-  id: '/alerts',
-  path: '/alerts',
+const SatelliteRoute = SatelliteRouteImport.update({
+  id: '/satellite',
+  path: '/satellite',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HistoricalRoute = HistoricalRouteImport.update({
-  id: '/historical',
-  path: '/historical',
+const SystemRoute = SystemRouteImport.update({
+  id: '/system',
+  path: '/system',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MapRoute = MapRouteImport.update({
-  id: '/map',
-  path: '/map',
+const LabIdRoute = LabIdRouteImport.update({
+  id: '/lab/$id',
+  path: '/lab/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PredictionsRoute = PredictionsRouteImport.update({
-  id: '/predictions',
-  path: '/predictions',
+const StormIdRoute = StormIdRouteImport.update({
+  id: '/storm/$id',
+  path: '/storm/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/ai': typeof AiRoute
-  '/alerts': typeof AlertsRoute
-  '/historical': typeof HistoricalRoute
-  '/map': typeof MapRoute
-  '/predictions': typeof PredictionsRoute
+  '/explorer': typeof ExplorerRoute
+  '/satellite': typeof SatelliteRoute
+  '/system': typeof SystemRoute
+  '/lab/$id': typeof LabIdRoute
+  '/storm/$id': typeof StormIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/ai': typeof AiRoute
-  '/alerts': typeof AlertsRoute
-  '/historical': typeof HistoricalRoute
-  '/map': typeof MapRoute
-  '/predictions': typeof PredictionsRoute
+  '/explorer': typeof ExplorerRoute
+  '/satellite': typeof SatelliteRoute
+  '/system': typeof SystemRoute
+  '/lab/$id': typeof LabIdRoute
+  '/storm/$id': typeof StormIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/ai': typeof AiRoute
-  '/alerts': typeof AlertsRoute
-  '/historical': typeof HistoricalRoute
-  '/map': typeof MapRoute
-  '/predictions': typeof PredictionsRoute
+  '/explorer': typeof ExplorerRoute
+  '/satellite': typeof SatelliteRoute
+  '/system': typeof SystemRoute
+  '/lab/$id': typeof LabIdRoute
+  '/storm/$id': typeof StormIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/ai' | '/alerts' | '/historical' | '/map' | '/predictions'
+  fullPaths:
+    '/' | '/explorer' | '/satellite' | '/system' | '/lab/$id' | '/storm/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/ai' | '/alerts' | '/historical' | '/map' | '/predictions'
+  to: '/' | '/explorer' | '/satellite' | '/system' | '/lab/$id' | '/storm/$id'
   id:
     | '__root__'
     | '/'
-    | '/ai'
-    | '/alerts'
-    | '/historical'
-    | '/map'
-    | '/predictions'
+    | '/explorer'
+    | '/satellite'
+    | '/system'
+    | '/lab/$id'
+    | '/storm/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AiRoute: typeof AiRoute
-  AlertsRoute: typeof AlertsRoute
-  HistoricalRoute: typeof HistoricalRoute
-  MapRoute: typeof MapRoute
-  PredictionsRoute: typeof PredictionsRoute
+  ExplorerRoute: typeof ExplorerRoute
+  SatelliteRoute: typeof SatelliteRoute
+  SystemRoute: typeof SystemRoute
+  LabIdRoute: typeof LabIdRoute
+  StormIdRoute: typeof StormIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -105,39 +106,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/ai': {
-      id: '/ai'
-      path: '/ai'
-      fullPath: '/ai'
-      preLoaderRoute: typeof AiRouteImport
+    '/explorer': {
+      id: '/explorer'
+      path: '/explorer'
+      fullPath: '/explorer'
+      preLoaderRoute: typeof ExplorerRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/alerts': {
-      id: '/alerts'
-      path: '/alerts'
-      fullPath: '/alerts'
-      preLoaderRoute: typeof AlertsRouteImport
+    '/satellite': {
+      id: '/satellite'
+      path: '/satellite'
+      fullPath: '/satellite'
+      preLoaderRoute: typeof SatelliteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/historical': {
-      id: '/historical'
-      path: '/historical'
-      fullPath: '/historical'
-      preLoaderRoute: typeof HistoricalRouteImport
+    '/system': {
+      id: '/system'
+      path: '/system'
+      fullPath: '/system'
+      preLoaderRoute: typeof SystemRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/map': {
-      id: '/map'
-      path: '/map'
-      fullPath: '/map'
-      preLoaderRoute: typeof MapRouteImport
+    '/lab/$id': {
+      id: '/lab/$id'
+      path: '/lab/$id'
+      fullPath: '/lab/$id'
+      preLoaderRoute: typeof LabIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/predictions': {
-      id: '/predictions'
-      path: '/predictions'
-      fullPath: '/predictions'
-      preLoaderRoute: typeof PredictionsRouteImport
+    '/storm/$id': {
+      id: '/storm/$id'
+      path: '/storm/$id'
+      fullPath: '/storm/$id'
+      preLoaderRoute: typeof StormIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -145,11 +146,11 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AiRoute: AiRoute,
-  AlertsRoute: AlertsRoute,
-  HistoricalRoute: HistoricalRoute,
-  MapRoute: MapRoute,
-  PredictionsRoute: PredictionsRoute,
+  ExplorerRoute: ExplorerRoute,
+  SatelliteRoute: SatelliteRoute,
+  SystemRoute: SystemRoute,
+  LabIdRoute: LabIdRoute,
+  StormIdRoute: StormIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -4,15 +4,33 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * CycloVision console.
+ *
+ * The palette is semantic, not decorative: one hue per kind of number, used
+ * nowhere else. A reader who learns three colours can tell at a glance whether
+ * something was measured, predicted by the neural models, or drawn from
+ * historical analogues — which is the distinction this whole product turns on.
+ *
+ *   observed  cold blue    a fix that was actually recorded
+ *   model     amber        output of a trained model
+ *   analogue  violet       aggregate of similar past storms
+ *   absent    grey         no data; never filled in with a plausible value
+ *
+ * Surfaces are flat and separated by hairlines rather than blur and shadow, so
+ * dense numeric panels stay legible over a full-bleed map.
+ */
+
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 3px);
+  --radius-md: calc(var(--radius) - 1px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --font-display: "Space Grotesk", ui-sans-serif, sans-serif;
-  --font-sans: "DM Sans", ui-sans-serif, sans-serif;
+
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -32,122 +50,202 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-amber: var(--amber);
-  --color-clay: var(--clay);
-  --color-ink: var(--ink);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
+
+  /* Provenance hues. */
+  --color-observed: var(--observed);
+  --color-model: var(--model);
+  --color-analogue: var(--analogue);
+  --color-absent: var(--absent);
+
+  /* Storm intensity ramp, ordered by Saffir-Simpson category. */
+  --color-cat-0: var(--cat-0);
+  --color-cat-1: var(--cat-1);
+  --color-cat-2: var(--cat-2);
+  --color-cat-3: var(--cat-3);
+  --color-cat-4: var(--cat-4);
+  --color-cat-5: var(--cat-5);
+  --color-cat-6: var(--cat-6);
+
+  --color-chart-1: var(--observed);
+  --color-chart-2: var(--model);
+  --color-chart-3: var(--analogue);
+  --color-chart-4: var(--cat-4);
+  --color-chart-5: var(--muted-foreground);
 }
 
 :root {
-  --radius: 0.875rem;
-  --background: oklch(0.962 0.014 80);
-  --foreground: oklch(0.24 0.014 60);
-  --ink: oklch(0.18 0.012 60);
-  --card: oklch(0.985 0.009 82);
-  --card-foreground: oklch(0.24 0.014 60);
-  --popover: oklch(0.985 0.009 82);
-  --popover-foreground: oklch(0.24 0.014 60);
-  --primary: oklch(0.31 0.045 48);
-  --primary-foreground: oklch(0.975 0.012 82);
-  --secondary: oklch(0.93 0.016 76);
-  --secondary-foreground: oklch(0.28 0.02 55);
-  --muted: oklch(0.935 0.014 78);
-  --muted-foreground: oklch(0.53 0.022 62);
-  --accent: oklch(0.7 0.145 55);
-  --accent-foreground: oklch(0.2 0.02 55);
-  --amber: oklch(0.72 0.155 58);
-  --clay: oklch(0.52 0.09 45);
-  --destructive: oklch(0.55 0.18 27);
-  --destructive-foreground: oklch(0.98 0.01 80);
-  --border: oklch(0.87 0.018 72);
-  --input: oklch(0.87 0.018 72);
-  --ring: oklch(0.7 0.145 55);
-  --chart-1: oklch(0.7 0.145 55);
-  --chart-2: oklch(0.42 0.06 45);
-  --chart-3: oklch(0.6 0.07 90);
-  --chart-4: oklch(0.55 0.18 27);
-  --chart-5: oklch(0.62 0.03 60);
+  --radius: 0.5rem;
+
+  /* Deep blue-black, the colour of an unlit ocean at night. */
+  --background: oklch(0.17 0.019 258);
+  --surface: oklch(0.213 0.021 258);
+  --surface-raised: oklch(0.247 0.023 257);
+  --foreground: oklch(0.94 0.008 250);
+
+  --card: oklch(0.213 0.021 258);
+  --card-foreground: oklch(0.94 0.008 250);
+  --popover: oklch(0.235 0.022 258);
+  --popover-foreground: oklch(0.94 0.008 250);
+
+  --primary: oklch(0.78 0.13 78);
+  --primary-foreground: oklch(0.19 0.02 258);
+  --secondary: oklch(0.28 0.024 258);
+  --secondary-foreground: oklch(0.9 0.01 250);
+  --muted: oklch(0.26 0.022 258);
+  --muted-foreground: oklch(0.66 0.022 254);
+  --accent: oklch(0.3 0.03 255);
+  --accent-foreground: oklch(0.94 0.008 250);
+  --destructive: oklch(0.64 0.19 22);
+  --destructive-foreground: oklch(0.97 0.01 250);
+
+  --border: oklch(0.32 0.022 258);
+  --input: oklch(0.34 0.024 258);
+  --ring: oklch(0.78 0.13 78);
+
+  --observed: oklch(0.78 0.125 232);
+  --model: oklch(0.8 0.14 74);
+  --analogue: oklch(0.73 0.15 300);
+  --absent: oklch(0.52 0.016 256);
+
+  --cat-0: oklch(0.7 0.05 235);
+  --cat-1: oklch(0.79 0.13 200);
+  --cat-2: oklch(0.85 0.14 150);
+  --cat-3: oklch(0.88 0.16 95);
+  --cat-4: oklch(0.8 0.16 55);
+  --cat-5: oklch(0.7 0.19 30);
+  --cat-6: oklch(0.62 0.22 8);
 }
 
 @layer base {
   * {
-    border-color: var(--color-border);
+    border-color: var(--border);
   }
 
   html,
+  body,
+  #root {
+    height: 100%;
+  }
+
   body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
+    background-color: var(--background);
+    color: var(--foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+
+  /* Numbers are read in columns, so they must not jitter as they update. */
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
   }
 
   h1,
   h2,
   h3 {
     font-family: var(--font-display);
-    letter-spacing: -0.02em;
+    letter-spacing: -0.015em;
+  }
+
+  ::selection {
+    background: oklch(0.78 0.13 78 / 0.28);
+  }
+
+  ::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 6px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--input);
   }
 }
 
-@utility panel {
-  background-color: color-mix(in oklab, var(--card) 88%, transparent);
-  backdrop-filter: blur(14px);
-  border: 1px solid color-mix(in oklab, var(--border) 90%, transparent);
-  border-radius: var(--radius-xl);
-}
-
-@utility tech-label {
-  font-family: var(--font-display);
-  font-size: 0.625rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--muted-foreground);
-}
-
-@utility metric-value {
-  font-family: var(--font-display);
-  font-weight: 300;
-  letter-spacing: -0.03em;
-  line-height: 1;
-}
-
-@keyframes ping-ring {
-  0% {
-    transform: scale(0.6);
-    opacity: 0.8;
+@layer components {
+  /* A flat instrument panel: hairline edge, no shadow stack, no blur. */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
   }
-  100% {
-    transform: scale(2.4);
-    opacity: 0;
+
+  .panel-raised {
+    background: var(--surface-raised);
+    border: 1px solid var(--input);
+    border-radius: var(--radius);
   }
-}
 
-@keyframes sweep {
-  to {
-    transform: rotate(360deg);
+  /* Small-caps field label. Wide tracking keeps it readable at 10px. */
+  .label-xs {
+    font-size: 0.625rem;
+    line-height: 1rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+    font-weight: 500;
   }
-}
 
-@utility radar-sweep {
-  animation: sweep 4s linear infinite;
-}
+  /* Faint graticule behind empty areas; suggests a chart without drawing one. */
+  .graticule {
+    background-image:
+      linear-gradient(to right, oklch(1 0 0 / 0.028) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(1 0 0 / 0.028) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
 
-@utility pulse-ring {
-  animation: ping-ring 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
+  .hairline-t {
+    border-top: 1px solid var(--border);
+  }
 
-.leaflet-container {
-  background: oklch(0.2 0.01 60);
-  font-family: var(--font-sans);
-}
-.leaflet-popup-content-wrapper,
-.leaflet-popup-tip {
-  background: var(--card);
-  color: var(--foreground);
-  border-radius: 12px;
+  /* Leaflet's own chrome, restyled to sit inside a dark console. */
+  .leaflet-container {
+    background: oklch(0.145 0.018 258);
+    font-family: var(--font-sans);
+    outline: none;
+  }
+
+  .leaflet-bar,
+  .leaflet-popup-content-wrapper,
+  .leaflet-popup-tip {
+    background: var(--surface-raised);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+    box-shadow: none;
+  }
+
+  .leaflet-bar a {
+    background: var(--surface-raised);
+    color: var(--foreground);
+    border-bottom-color: var(--border);
+  }
+
+  .leaflet-bar a:hover {
+    background: var(--accent);
+  }
+
+  .leaflet-popup-content {
+    margin: 0.625rem 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .leaflet-control-attribution {
+    background: oklch(0.17 0.019 258 / 0.78) !important;
+    color: var(--muted-foreground) !important;
+    font-size: 0.625rem !important;
+  }
+
+  .leaflet-control-attribution a {
+    color: var(--muted-foreground) !important;
+  }
 }

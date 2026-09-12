@@ -24,4 +24,7 @@ public interface CycloneObservationRepository
     Optional<CycloneObservation> findFirstByCycloneIdOrderByObservedAtDesc(
             UUID cycloneId
     );
+
+    /** Newest fix in the archive, for reporting data freshness. */
+    Optional<CycloneObservation> findFirstByOrderByObservedAtDesc();
 }

@@ -1,0 +1,231 @@
+/**
+ * Types mirroring the Spring Boot API.
+ *
+ * Nulls are load-bearing throughout. An absent confidence means the model's
+ * checkpoint recorded no evaluation; an absent uncertainty radius means no cone
+ * may be drawn; an absent pressure means the fix never carried one. The UI must
+ * render those as gaps, never as zero.
+ */
+
+export type AnalysisStatus =
+  | "COMPLETED"
+  | "PARTIAL"
+  | "NOT_AVAILABLE"
+  | "FAILED"
+  | "VALIDATION_ERROR";
+
+export type ModelState =
+  | "TRAINED"
+  | "UNTRAINED"
+  | "CHECKPOINT_INVALID"
+  | "LOAD_FAILED"
+  | "UNAVAILABLE";
+
+export interface PageResponse<T> {
+  items: T[];
+  page: number;
+  size: number;
+  totalItems: number;
+  totalPages: number;
+}
+
+export interface Observation {
+  id: string;
+  observedAt: string;
+  latitude: number;
+  longitude: number;
+  windSpeedKph: number | null;
+  pressureHpa: number | null;
+  movementSpeedKph: number | null;
+  movementDirectionDegrees: number | null;
+  category: string | null;
+  categoryRank: number | null;
+  source: string;
+}
+
+export interface DataQuality {
+  observationCount: number;
+  withWindCount: number;
+  withPressureCount: number;
+  firstObservedAt: string | null;
+  lastObservedAt: string | null;
+  largestGapHours: number | null;
+  trackDurationHours: number | null;
+  forecastReady: boolean;
+  limitations: string[];
+  observationSource: string;
+  windScale: string;
+}
+
+export interface CycloneSummary {
+  id: string;
+  externalId: string;
+  name: string | null;
+  basin: string;
+  seasonYear: number | null;
+  status: string;
+  observationCount: number;
+  firstObservedAt: string | null;
+  lastObservedAt: string | null;
+  peakWindKph: number | null;
+  minPressureHpa: number | null;
+  peakCategory: string | null;
+  peakCategoryRank: number | null;
+}
+
+export interface CycloneDetail extends Omit<CycloneSummary, "observationCount"> {
+  basinName: string;
+  latestObservation: Observation | null;
+  peakObservation: Observation | null;
+  dataQuality: DataQuality;
+}
+
+export interface ModelRef {
+  name: string | null;
+  version: string | null;
+  featureSetVersion: string | null;
+}
+
+export interface TrackPoint {
+  forecastHours: number;
+  forecastAt: string;
+  latitude: number;
+  longitude: number;
+  /** The model's measured held-out mean error at this horizon, in km. */
+  uncertaintyRadiusKm: number | null;
+}
+
+export interface TrackForecast {
+  status: AnalysisStatus | null;
+  reason: string | null;
+  confidence: number | null;
+  model: ModelRef;
+  points: TrackPoint[];
+}
+
+export interface IntensityPoint {
+  forecastHours: number;
+  forecastAt: string;
+  windSpeedKph: number | null;
+  pressureHpa: number | null;
+  category: string | null;
+}
+
+export interface IntensityForecast {
+  status: AnalysisStatus | null;
+  reason: string | null;
+  confidence: number | null;
+  trend: string | null;
+  model: ModelRef;
+  points: IntensityPoint[];
+}
+
+export interface AnalogueMatch {
+  rank: number;
+  externalId: string;
+  name: string | null;
+  seasonYear: number | null;
+  similarityScore: number;
+  basis: string[];
+  /** Present when that storm is also in this database. */
+  cycloneId: string | null;
+}
+
+export interface AnaloguePoint {
+  forecastHours: number;
+  forecastAt: string;
+  latitude: number;
+  longitude: number;
+  windSpeedKph: number | null;
+  /** Members' mean distance from the ensemble mean: their disagreement. */
+  spreadKm: number | null;
+  memberCount: number | null;
+}
+
+export interface AnalogueForecast {
+  status: AnalysisStatus | null;
+  reason: string | null;
+  confidence: number | null;
+  model: ModelRef;
+  matches: AnalogueMatch[];
+  points: AnaloguePoint[];
+}
+
+export interface PredictionRun {
+  id: string;
+  cycloneId: string;
+  cycloneName: string | null;
+  cycloneExternalId: string;
+  baseObservationAt: string;
+  createdAt: string;
+  overallStatus: AnalysisStatus;
+  observationsUsed: number;
+  inputNotes: string[];
+  inputObservationIds: string[];
+  inferenceMs: number | null;
+  trajectory: TrackForecast;
+  intensity: IntensityForecast;
+  analogues: AnalogueForecast;
+}
+
+export interface SatelliteAnalysis {
+  id: string;
+  cycloneId: string | null;
+  imageUrl: string;
+  imageType: string | null;
+  capturedAt: string | null;
+  status: AnalysisStatus;
+  reason: string | null;
+  cycloneDetected: boolean | null;
+  confidence: number | null;
+  centerLatitude: number | null;
+  centerLongitude: number | null;
+  gradcamUrl: string | null;
+  modelName: string | null;
+  modelVersion: string | null;
+  labelDefinition: string | null;
+  inferenceMs: number | null;
+  createdAt: string;
+}
+
+export interface SystemModel {
+  available: boolean;
+  state: ModelState | null;
+  name: string | null;
+  version: string | null;
+  horizons: number[] | null;
+  trainedAt: string | null;
+  reason: string | null;
+  sources: string[] | null;
+  analogueStorms: number | null;
+}
+
+export interface SystemStatus {
+  ai: {
+    reachable: boolean;
+    url: string;
+    version: string | null;
+    detail: string | null;
+    models: Record<string, SystemModel>;
+  };
+  data: {
+    cyclones: number;
+    observations: number;
+    forecastRuns: number;
+    satelliteAnalyses: number;
+    latestObservation: string | null;
+    observationSource: string;
+    windScale: string;
+    ingestSourceAvailable: boolean;
+    ingestSourcePath: string;
+  };
+}
+
+export interface ApiErrorBody {
+  timestamp: string;
+  status: number;
+  errorCode: string;
+  message: string;
+  path: string;
+  usableObservations?: number;
+}

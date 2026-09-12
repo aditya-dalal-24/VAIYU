@@ -1,29 +1,31 @@
 package com.cyclovision.controller;
 
-import com.cyclovision.ingestion.service.CycloneIngestionService;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.cyclovision.ingestion.IbtracsImporter;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-
+/**
+ * Loading the best-track archive into the database.
+ *
+ * <p>Internal on purpose: ingestion rewrites the archive, so it is not part of
+ * the public surface. Re-running it is safe — the import inserts only what is
+ * missing.
+ */
 @RestController
 @RequestMapping("/api/internal/ingest")
 public class IngestionController {
 
-    private final CycloneIngestionService ingestionService;
+    private final IbtracsImporter importer;
 
-    public IngestionController(CycloneIngestionService ingestionService) {
-        this.ingestionService = ingestionService;
+    public IngestionController(IbtracsImporter importer) {
+        this.importer = importer;
     }
 
-    @PostMapping("/trigger")
-    public ResponseEntity<Map<String, Object>> triggerIngestion() {
-        ingestionService.runIngestion();
-        return ResponseEntity.ok(Map.of(
-            "success", true,
-            "message", "Cyclone ingestion completed successfully"
-        ));
+    /**
+     * @param path optional override of the observation table location; the
+     *             default comes from cyclovision.ingest.observations-path
+     */
+    @PostMapping("/ibtracs")
+    public IbtracsImporter.Summary ingest(@RequestParam(required = false) String path) {
+        return importer.importFrom(path);
     }
 }

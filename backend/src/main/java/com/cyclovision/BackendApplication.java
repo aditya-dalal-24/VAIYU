@@ -2,6 +2,7 @@ package com.cyclovision;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.io.File;
@@ -10,6 +11,7 @@ import java.nio.file.Files;
 import java.util.List;
 
 @SpringBootApplication
+@ConfigurationPropertiesScan
 @EnableScheduling
 public class BackendApplication {
 

@@ -1,13 +1,30 @@
 package com.cyclovision.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * One tropical cyclone from the best-track archive.
+ *
+ * <p>Identity is {@code (externalSource, externalId)} — for IBTrACS that is the
+ * storm's SID, such as {@code 2023129N08091}. Keeping the source identifier is
+ * what lets the analogue ensemble's matches resolve back to a storm here: the
+ * AI service returns SIDs, and the same archive was loaded into this table.
+ *
+ * <p>{@code status} is {@code ARCHIVED} or {@code RECENT}, never "ACTIVE".
+ * There is no live feed behind this data, so a claim of active monitoring would
+ * not be supportable.
+ */
 @Entity
 @Table(name = "cyclones")
+@Getter
+@Setter
 public class Cyclone {
 
     @Id
@@ -20,14 +37,19 @@ public class Cyclone {
     @Column(name = "external_id")
     private String externalId;
 
+    /** Null for unnamed storms; the interface falls back to the identifier. */
     @Column(name = "name")
     private String name;
 
+    /** IBTrACS basin code: NI, SI, NA, SA, EP, WP, SP. */
     @Column(name = "basin", nullable = false)
     private String basin;
 
     @Column(name = "status", nullable = false)
     private String status;
+
+    @Column(name = "season_year")
+    private Integer seasonYear;
 
     @Column(name = "current_category")
     private String currentCategory;
@@ -38,119 +60,11 @@ public class Cyclone {
     @Column(name = "updated_at", insertable = false)
     private Instant updatedAt;
 
-    @OneToMany(mappedBy = "cyclone")
-    private List<CycloneObservation> observations;
-
-    @OneToMany(mappedBy = "cyclone")
-    private List<WeatherData> weatherData;
-
-    @OneToMany(mappedBy = "cyclone")
-    private List<SatelliteImage> satelliteImages;
-
-    @OneToMany(mappedBy = "cyclone")
-    private List<CyclonePrediction> predictions;
-
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
-    public String getExternalSource() {
-        return externalSource;
-    }
-
-    public void setExternalSource(String externalSource) {
-        this.externalSource = externalSource;
-    }
-
-    public String getExternalId() {
-        return externalId;
-    }
-
-    public void setExternalId(String externalId) {
-        this.externalId = externalId;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getBasin() {
-        return basin;
-    }
-
-    public void setBasin(String basin) {
-        this.basin = basin;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public String getCurrentCategory() {
-        return currentCategory;
-    }
-
-    public void setCurrentCategory(String currentCategory) {
-        this.currentCategory = currentCategory;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public List<CycloneObservation> getObservations() {
-        return observations;
-    }
-
-    public void setObservations(List<CycloneObservation> observations) {
-        this.observations = observations;
-    }
-
-    public List<WeatherData> getWeatherData() {
-        return weatherData;
-    }
-
-    public void setWeatherData(List<WeatherData> weatherData) {
-        this.weatherData = weatherData;
-    }
-
-    public List<SatelliteImage> getSatelliteImages() {
-        return satelliteImages;
-    }
-
-    public void setSatelliteImages(List<SatelliteImage> satelliteImages) {
-        this.satelliteImages = satelliteImages;
-    }
-
-    public List<CyclonePrediction> getPredictions() {
-        return predictions;
-    }
-
-    public void setPredictions(List<CyclonePrediction> predictions) {
-        this.predictions = predictions;
-    }
+    /**
+     * Mapped for the aggregate query that powers the storm list. Loading it
+     * eagerly would pull a whole track per storm, so it stays lazy and callers
+     * read observations through their own repository.
+     */
+    @OneToMany(mappedBy = "cyclone", fetch = FetchType.LAZY)
+    private List<CycloneObservation> observations = new ArrayList<>();
 }

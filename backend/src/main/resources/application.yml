@@ -1,5 +1,9 @@
 server:
   port: ${SERVER_PORT:8080}
+  error:
+    # A stack trace in an API response leaks internals and helps no caller.
+    include-stacktrace: never
+    include-message: always
 
 spring:
   application:
@@ -10,34 +14,71 @@ spring:
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:changeme}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 10000
 
   jpa:
     hibernate:
-      ddl-auto: update
+      # Flyway owns the schema. Hibernate only checks that the mapping matches
+      # what the migrations created: with 'update' the two fought each other and
+      # silently created tables no migration knew about.
+      ddl-auto: validate
     open-in-view: false
     show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        jdbc:
+          batch_size: 100
+        order_inserts: true
+        order_updates: true
 
   flyway:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
 
-demo:
-  mode: true
+  servlet:
+    multipart:
+      # Matches the 12 MB image ceiling the AI service enforces on a fetch.
+      max-file-size: 12MB
+      max-request-size: 13MB
+
+  jackson:
+    default-property-inclusion: non_null
+
+# The single boundary to the Python AI service (contract section 16).
+ai:
+  service:
+    url: ${AI_SERVICE_URL:http://localhost:8000}
+    connect-timeout: 3s
+    # Numerical inference is tens of milliseconds on CPU; this is headroom for
+    # a cold first request that loads checkpoints.
+    read-timeout: 30s
+    # Satellite analysis also fetches the image before running the model.
+    satellite-timeout: 60s
+    health-timeout: 3s
+
+cyclovision:
+  # Where uploaded satellite frames are served from. The AI service fetches
+  # imagery by URL, so this must be reachable from it.
+  public-base-url: ${PUBLIC_BASE_URL:http://localhost:8080}
+  satellite:
+    storage-dir: ${SATELLITE_STORAGE_DIR:./data/satellite-uploads}
+  ingest:
+    # The observation table the AI service's training pipeline produces, so
+    # inference input matches training data by construction.
+    observations-path: ${OBSERVATIONS_PATH:../ai-service/data/processed/observations.csv}
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info
-
   endpoint:
     health:
       show-details: when_authorized
 
-ai:
-  service:
-    url: ${AI_SERVICE_URL:http://localhost:8000}
+logging:
+  level:
+    com.cyclovision: INFO
