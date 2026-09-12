@@ -72,7 +72,7 @@ export function ForecastPanel({
           title="This storm cannot be forecast"
           detail="The models need at least three reported fixes with a wind speed. See the data-quality panel for what is missing."
         />
-      ) : error ? (
+      ) : error && !run ? (
         <ForecastError error={error} />
       ) : isRunning ? (
         <div className="graticule flex h-40 flex-col items-center justify-center gap-2">
@@ -93,7 +93,20 @@ export function ForecastPanel({
         />
       ) : (
         <>
-          {staleBase ? (
+          {/*
+            A failed re-run must not erase the run that is already stored: the
+            reader loses a real forecast to an error about a different
+            attempt, and the panel's status chip would then describe a run
+            whose numbers are no longer on screen. The failure is said plainly
+            above the run it did not replace.
+          */}
+          {error ? (
+            <div className="bg-destructive/15 px-3 py-2 text-[0.6875rem] leading-relaxed text-primary">
+              <span className="font-medium">{describeError(error).title}.</span>{" "}
+              {describeError(error).detail} The forecast below is the one already stored,
+              made from {fmtDateTime(run.baseObservationAt)}.
+            </div>
+          ) : staleBase ? (
             <div className="bg-primary/10 px-3 py-2 text-[0.6875rem] leading-relaxed text-primary">
               Showing the forecast made from {fmtDateTime(run.baseObservationAt)}. The timeline
               is on a different fix — run the model again to forecast from there.
@@ -111,40 +124,39 @@ export function ForecastPanel({
   );
 }
 
-function ForecastError({ error }: { error: unknown }) {
+/**
+ * What a forecast failure means, in the caller's terms.
+ *
+ * The three cases are genuinely different and a reader has to be able to tell
+ * them apart: the storm's own data cannot support a forecast, the model is not
+ * there to ask, or the backend itself is down. Nothing here guesses at a cause
+ * the backend did not report.
+ */
+function describeError(error: unknown): { title: string; detail: string } {
   if (error instanceof ApiError) {
     if (error.isUnprocessable) {
-      return (
-        <Empty
-          tone="warning"
-          title="The models declined this request"
-          detail={error.message}
-        />
-      );
+      return { title: "The models declined this request", detail: error.message };
     }
     if (error.isUnavailable) {
-      return (
-        <Empty
-          tone="warning"
-          title="No model available"
-          detail={`${error.message} The archive stays browsable; forecasting resumes when the AI service has a trained checkpoint loaded.`}
-        />
-      );
+      return {
+        title: "No model available",
+        detail: `${error.message} The archive stays browsable.`,
+      };
     }
     if (error.isOffline) {
-      return (
-        <Empty tone="warning" title="Backend unreachable" detail={error.message} />
-      );
+      return { title: "Backend unreachable", detail: error.message };
     }
-    return <Empty tone="warning" title="Forecast failed" detail={error.message} />;
+    return { title: "Forecast failed", detail: error.message };
   }
-  return (
-    <Empty
-      tone="warning"
-      title="Forecast failed"
-      detail={error instanceof Error ? error.message : "Unknown error."}
-    />
-  );
+  return {
+    title: "Forecast failed",
+    detail: error instanceof Error ? error.message : "Unknown error.",
+  };
+}
+
+function ForecastError({ error }: { error: unknown }) {
+  const { title, detail } = describeError(error);
+  return <Empty tone="warning" title={title} detail={detail} />;
 }
 
 function RunHeader({ run }: { run: PredictionRun }) {
