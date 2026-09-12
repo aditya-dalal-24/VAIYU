@@ -25,7 +25,7 @@ import {
   StatusChip,
 } from "@/components/console/primitives";
 import { ApiError } from "@/lib/api";
-import { fmtConfidence, fmtCoords, fmtDateTime, fmtMs } from "@/lib/format";
+import { fmtConfidence, fmtCoords, fmtDateTime, fmtMs, stormName } from "@/lib/format";
 import { useAnalyseSatellite, useSatelliteAnalyses, useSystemStatus } from "@/lib/queries";
 import type { CycloneSummary, SatelliteAnalysis } from "@/lib/types";
 
@@ -111,7 +111,7 @@ function SatelliteIntelligence() {
               <p className="mt-0.5 text-xs">
                 {storm ? (
                   <>
-                    {storm.name ?? storm.externalId}{" "}
+                    {stormName(storm.name, storm.externalId)}{" "}
                     <span className="num text-[0.625rem] text-muted-foreground">
                       {storm.externalId}
                     </span>

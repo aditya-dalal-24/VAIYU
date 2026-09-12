@@ -113,3 +113,109 @@ class TestOtherSilentFailures:
         table = convert(write(tmp_path, *every_three_hours()))
         assert set(REQUIRED_COLUMNS) <= set(table.columns)
         assert pd.api.types.is_datetime64_any_dtype(table["timestamp"])
+
+
+class TestPressureIsOptional:
+    """Wind is required; pressure is not.
+
+    Requiring both discarded 476 whole storms, worst in the North Indian Ocean
+    where two thirds of wind-bearing fixes report no central pressure. The
+    models carry a ``pressure_present`` flag for exactly this case.
+    """
+
+    def test_a_fix_without_pressure_is_kept(self, tmp_path):
+        table = convert(write(
+            tmp_path,
+            row(time="2020-01-01 00:00:00", usa_pres=""),
+            row(time="2020-01-01 06:00:00", usa_pres=""),
+            row(time="2020-01-01 12:00:00", usa_pres=""),
+            row(time="2020-01-01 18:00:00", usa_pres=""),
+        ))
+
+        assert len(table) == 4
+        assert table["pressure_hpa"].isna().all()
+
+    def test_an_absent_pressure_stays_absent_rather_than_becoming_a_number(self, tmp_path):
+        table = convert(write(
+            tmp_path,
+            row(time="2020-01-01 00:00:00", usa_pres=990),
+            row(time="2020-01-01 06:00:00", usa_pres=""),
+        ))
+
+        assert table["pressure_hpa"].tolist()[0] == 990
+        assert pd.isna(table["pressure_hpa"].tolist()[1])
+        assert 0 not in table["pressure_hpa"].fillna(-1).tolist()
+
+    def test_a_fix_without_wind_is_still_dropped(self, tmp_path):
+        table = convert(write(
+            tmp_path,
+            row(time="2020-01-01 00:00:00", usa_wind=""),
+            row(time="2020-01-01 06:00:00", usa_wind=45),
+        ))
+
+        assert len(table) == 1
+        assert table["wind_speed_kph"].notna().all()
+
+
+class TestUncodedFixes:
+    """``NR`` means no agency coded the nature of that fix.
+
+    Kept inside storms that are coded tropical somewhere -- the live adapter
+    accepts them, so excluding them made training disagree with serving -- and
+    excluded when nothing in the archive ever called the storm tropical.
+    """
+
+    def test_uncoded_gaps_inside_a_tropical_storm_are_kept(self, tmp_path):
+        table = convert(write(
+            tmp_path,
+            row(time="2020-01-01 00:00:00", nature="TS"),
+            row(time="2020-01-01 06:00:00", nature="NR"),
+            row(time="2020-01-01 12:00:00", nature="TS"),
+        ))
+
+        assert len(table) == 3
+
+    def test_a_storm_never_coded_tropical_is_excluded_entirely(self, tmp_path):
+        table = convert(write(
+            tmp_path,
+            row(sid="uncoded", time="2020-01-01 00:00:00", nature="NR"),
+            row(sid="uncoded", time="2020-01-01 06:00:00", nature="NR"),
+            row(sid="tropical", time="2020-01-01 00:00:00", nature="TS"),
+        ))
+
+        assert table["cyclone_id"].unique().tolist() == ["tropical"]
+
+    def test_other_stages_are_still_excluded(self, tmp_path):
+        table = convert(write(
+            tmp_path,
+            row(time="2020-01-01 00:00:00", nature="TS"),
+            row(time="2020-01-01 06:00:00", nature="ET"),
+            row(time="2020-01-01 12:00:00", nature="DS"),
+            row(time="2020-01-01 18:00:00", nature="SS"),
+        ))
+
+        assert len(table) == 1
+
+
+class TestSubBasin:
+    """Arabian Sea and Bay of Bengal are the distinction the region uses."""
+
+    def test_sub_basin_is_carried_through(self, tmp_path):
+        rows = [
+            f"2020001N10100,2020,NI,AS,TEST,2020-01-01 {hour:02d}:00:00,TS,15.0,65.0,,50,990"
+            for hour in (0, 6, 12, 18)
+        ]
+        table = convert(write(tmp_path, *rows))
+
+        assert table["sub_basin"].unique().tolist() == ["AS"]
+        assert table["basin"].unique().tolist() == ["NI"]
+
+    def test_a_storm_crossing_sub_basins_keeps_each_fix_own_value(self, tmp_path):
+        table = convert(write(
+            tmp_path,
+            "2020001N10100,2020,NI,BB,TEST,2020-01-01 00:00:00,TS,12.0,88.0,,50,990",
+            "2020001N10100,2020,NI,BB,TEST,2020-01-01 06:00:00,TS,13.0,84.0,,50,990",
+            "2020001N10100,2020,NI,AS,TEST,2020-01-01 12:00:00,TS,14.0,72.0,,50,990",
+        ))
+
+        assert table["sub_basin"].tolist() == ["BB", "BB", "AS"]

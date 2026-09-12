@@ -12,7 +12,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { Button, CategoryChip, Empty, Panel, Skeleton } from "@/components/console/primitives";
-import { categoryColor, fmtDate, fmtPressure, fmtWind } from "@/lib/format";
+import { BASIN_NAMES, categoryColor, fmtDate, fmtPressure, fmtWind, stormName } from "@/lib/format";
 import { useCyclones, useFilters } from "@/lib/queries";
 
 export const Route = createFileRoute("/explorer")({
@@ -31,6 +31,7 @@ function Explorer() {
   const [raw, setRaw] = useState("");
   const [query, setQuery] = useState("");
   const [basin, setBasin] = useState<string>("");
+  const [subBasin, setSubBasin] = useState<string>("");
   const [season, setSeason] = useState<string>("");
   const [sort, setSort] = useState<string>("recent");
   const [page, setPage] = useState(0);
@@ -44,9 +45,35 @@ function Explorer() {
   }, [raw]);
 
   const filters = useFilters();
+
+  /*
+   * A sub-basin belongs to exactly one basin, so the options narrow with the
+   * basin selection. Offering "Arabian Sea" while the Atlantic is selected
+   * would be a filter that can only ever return nothing.
+   */
+  const subBasinOptions = (filters.data?.subBasins ?? []).filter(
+    (option) => !basin || option.basin === basin,
+  );
+
+  /*
+   * With no basin chosen the list spans every ocean -- the Bay of Bengal next
+   * to the Gulf of Mexico -- so it is grouped by basin to stay readable. With
+   * one basin chosen there is nothing to group.
+   */
+  const groupedSubBasins = subBasinOptions.reduce<Record<string, typeof subBasinOptions>>(
+    (groups, option) => {
+      const group = groups[option.basin] ?? [];
+      group.push(option);
+      groups[option.basin] = group;
+      return groups;
+    },
+    {},
+  );
+
   const { data, isLoading, isError, error } = useCyclones({
     query: query || undefined,
     basin: basin || undefined,
+    subBasin: subBasin || undefined,
     season: season ? Number(season) : undefined,
     sort,
     page,
@@ -72,6 +99,8 @@ function Explorer() {
             value={basin}
             onChange={(event) => {
               setBasin(event.target.value);
+              // The chosen sea may not be in the new basin.
+              setSubBasin("");
               setPage(0);
             }}
             className="mt-1 block rounded border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-input"
@@ -79,11 +108,42 @@ function Explorer() {
             <option value="">All</option>
             {(filters.data?.basins ?? []).map((code) => (
               <option key={code} value={code}>
-                {code}
+                {BASIN_NAMES[code] ?? code}
               </option>
             ))}
           </select>
         </label>
+
+        {subBasinOptions.length > 0 ? (
+          <label>
+            <span className="label-xs">Sea</span>
+            <select
+              value={subBasin}
+              onChange={(event) => {
+                setSubBasin(event.target.value);
+                setPage(0);
+              }}
+              className="mt-1 block rounded border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-input"
+            >
+              <option value="">All</option>
+              {basin
+                ? subBasinOptions.map((option) => (
+                    <option key={`${option.basin}-${option.code}`} value={option.code}>
+                      {option.name}
+                    </option>
+                  ))
+                : Object.entries(groupedSubBasins).map(([code, options]) => (
+                    <optgroup key={code} label={BASIN_NAMES[code] ?? code}>
+                      {options.map((option) => (
+                        <option key={`${option.basin}-${option.code}`} value={option.code}>
+                          {option.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+            </select>
+          </label>
+        ) : null}
 
         <label>
           <span className="label-xs">Season</span>
@@ -175,13 +235,26 @@ function Explorer() {
                         style={{ background: categoryColor(storm.peakCategoryRank) }}
                         aria-hidden
                       />
-                      <span className="font-medium">{storm.name ?? storm.externalId}</span>
-                      <span className="num text-[0.625rem] text-muted-foreground">
-                        {storm.externalId}
-                      </span>
+                      <span className="font-medium">{stormName(storm.name, storm.externalId)}</span>
+                      {/* An unnamed storm is shown by its identifier already,
+                          so repeating it beside itself says nothing. */}
+                      {storm.name ? (
+                        <span className="num text-[0.625rem] text-muted-foreground">
+                          {storm.externalId}
+                        </span>
+                      ) : null}
                     </Link>
                   </td>
-                  <td className="num px-3 py-1.5 text-xs text-muted-foreground">{storm.basin}</td>
+                  <td className="px-3 py-1.5 text-muted-foreground">
+                    <span className="num text-xs" title={BASIN_NAMES[storm.basin] ?? storm.basin}>
+                      {storm.basin}
+                    </span>
+                    {storm.subBasinName ? (
+                      <span className="block text-[0.625rem] leading-tight">
+                        {storm.subBasinName}
+                      </span>
+                    ) : null}
+                  </td>
                   <td className="num px-3 py-1.5 text-xs">{storm.seasonYear ?? "—"}</td>
                   <td className="num px-3 py-1.5 text-[0.6875rem] text-muted-foreground">
                     {fmtDate(storm.firstObservedAt)} → {fmtDate(storm.lastObservedAt)}

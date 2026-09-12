@@ -9,6 +9,7 @@
 import type {
   CycloneDetail,
   CycloneSummary,
+  FilterOptions,
   Observation,
   PageResponse,
   PredictionRun,
@@ -132,13 +133,14 @@ export const api = {
   cyclones: (params: {
     query?: string | undefined;
     basin?: string | undefined;
+    subBasin?: string | undefined;
     season?: number | undefined;
     sort?: string | undefined;
     page?: number | undefined;
     size?: number | undefined;
   }) => request<PageResponse<CycloneSummary>>(`/api/v1/cyclones${query(params)}`),
 
-  filters: () => request<{ seasons: number[]; basins: string[] }>("/api/v1/cyclones/filters"),
+  filters: () => request<FilterOptions>("/api/v1/cyclones/filters"),
 
   cyclone: (id: string) => request<CycloneDetail>(`/api/v1/cyclones/${id}`),
 

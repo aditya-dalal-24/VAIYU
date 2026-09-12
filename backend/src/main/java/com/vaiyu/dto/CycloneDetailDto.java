@@ -10,6 +10,9 @@ public record CycloneDetailDto(
         String name,
         String basin,
         String basinName,
+        String subBasin,
+        /** Expanded for display, or null when IBTrACS states no sub-basin. */
+        String subBasinName,
         Integer seasonYear,
         String status,
         Instant firstObservedAt,

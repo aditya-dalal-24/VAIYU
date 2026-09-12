@@ -45,6 +45,14 @@ public class Cyclone {
     @Column(name = "basin", nullable = false)
     private String basin;
 
+    /**
+     * IBTrACS sub-basin code at the genesis fix, or null when IBTrACS states
+     * none. AS is the Arabian Sea and BB the Bay of Bengal, which together
+     * make up the North Indian Ocean basin.
+     */
+    @Column(name = "sub_basin")
+    private String subBasin;
+
     @Column(name = "status", nullable = false)
     private String status;
 

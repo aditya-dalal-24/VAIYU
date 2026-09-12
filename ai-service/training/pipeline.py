@@ -166,18 +166,23 @@ def build_loader(
     sequences = scaler.transform_sequences(samples.sequences, samples.masks)
     environments = scaler.transform_environment(samples.environments)
 
-    targets = (
-        samples.position_targets
-        if target_kind == "position"
-        else samples.intensity_targets
-    )
+    # The mask travels with the target it belongs to. Position has one mask per
+    # horizon; intensity has one per component, because a fix can have a wind
+    # and no pressure. Both shapes are handled by masked_regression_loss, so the
+    # batch tuple stays the same for either model.
+    if target_kind == "position":
+        targets = samples.position_targets
+        target_masks = samples.target_masks
+    else:
+        targets = samples.intensity_targets
+        target_masks = samples.intensity_masks
 
     dataset = TensorDataset(
         torch.from_numpy(np.ascontiguousarray(sequences)),
         torch.from_numpy(np.ascontiguousarray(samples.masks)),
         torch.from_numpy(np.ascontiguousarray(environments)),
         torch.from_numpy(np.ascontiguousarray(targets)),
-        torch.from_numpy(np.ascontiguousarray(samples.target_masks)),
+        torch.from_numpy(np.ascontiguousarray(target_masks)),
         torch.from_numpy(np.ascontiguousarray(samples.trend_targets)),
         torch.from_numpy(np.ascontiguousarray(samples.trend_mask)),
     )
@@ -187,21 +192,30 @@ def build_loader(
 def masked_regression_loss(
     predictions: torch.Tensor, targets: torch.Tensor, mask: torch.Tensor
 ) -> torch.Tensor:
-    """Smooth L1 over horizons that have a real target.
+    """Smooth L1 over the targets that actually exist.
 
     Horizons without an observation near T+h are masked out entirely, so the
     model is never trained toward a target that does not exist. Smooth L1 is
     used rather than MSE because track and intensity data contain genuine
     outliers -- rapid intensification, sharp recurvature -- that a squared loss
     would let dominate the gradient.
+
+    The mask may be per-horizon ``[n, horizons]`` or per-component
+    ``[n, horizons, 2]``. The second form is what lets a fix with a wind but no
+    pressure reading train the wind head while contributing nothing to the
+    pressure head, instead of teaching it that pressure did not change.
     """
     per_element = torch.nn.functional.smooth_l1_loss(
         predictions, targets, reduction="none"
     )
-    per_horizon = per_element.mean(dim=-1)
 
-    masked = per_horizon * mask
-    denominator = mask.sum()
+    if mask.dim() == per_element.dim():
+        masked = per_element * mask
+        denominator = mask.sum()
+    else:
+        masked = per_element.mean(dim=-1) * mask
+        denominator = mask.sum()
+
     if denominator.item() == 0:
         return torch.zeros((), device=predictions.device, requires_grad=True)
     return masked.sum() / denominator

@@ -51,6 +51,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import warnings
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, List, Optional, Sequence
@@ -396,7 +397,14 @@ class AnalogueIndex:
             known = [c for c in columns if present[c]]
             if not known:
                 continue
-            with np.errstate(invalid="ignore"):
+            # An index window can be missing every feature in a group the
+            # query has -- common now that the archive keeps storms which
+            # never reported a pressure -- and nanmean warns about the empty
+            # slice. The NaN it returns is handled on the next line, so the
+            # warning is expected rather than informative, and is silenced
+            # here so it cannot bury a warning that does matter.
+            with np.errstate(invalid="ignore"), warnings.catch_warnings():
+                warnings.simplefilter("ignore", RuntimeWarning)
                 part = np.nanmean(squared[:, known], axis=1)
             # A window missing a whole group the query has is ranked last for
             # that query rather than treated as a perfect match.

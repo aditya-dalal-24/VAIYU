@@ -28,7 +28,15 @@ import {
 import { ForecastPanel } from "@/components/forecast/ForecastPanel";
 import { LazyStormMap } from "@/components/map/LazyStormMap";
 import { TrackTimeline } from "@/components/timeline/TrackTimeline";
-import { ABSENT, fmtCoords, fmtDateTime, fmtKm, fmtPressure, fmtWind } from "@/lib/format";
+import {
+  ABSENT,
+  fmtCoords,
+  fmtDateTime,
+  fmtKm,
+  fmtPressure,
+  fmtWind,
+  stormName,
+} from "@/lib/format";
 import { useCyclone, useLatestForecast, useRunForecast, useTrack } from "@/lib/queries";
 import type { Observation } from "@/lib/types";
 import { meanOf, verifyForecast } from "@/lib/verify";
@@ -127,7 +135,7 @@ function PredictionLab() {
             <div className="flex items-baseline gap-2">
               <span className="label-xs">Prediction Lab</span>
               <h1 className="font-display text-lg leading-none">
-                {storm.name ?? storm.externalId}
+                {stormName(storm.name, storm.externalId)}
               </h1>
               <span className="num text-xs text-muted-foreground">{storm.seasonYear}</span>
             </div>

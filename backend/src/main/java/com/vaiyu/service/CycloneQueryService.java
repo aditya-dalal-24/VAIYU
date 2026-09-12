@@ -51,15 +51,18 @@ public class CycloneQueryService {
     }
 
     public PageResponse<CycloneSummaryDto> search(
-            String query, String basin, Integer season, String sort, int page, int size) {
+            String query, String basin, String subBasin, Integer season, String sort,
+            int page, int size) {
 
         String like = (query == null || query.isBlank())
                 ? null
                 : "%" + query.trim().toLowerCase() + "%";
         String basinCode = (basin == null || basin.isBlank()) ? null : basin.trim().toUpperCase();
+        String subBasinCode =
+                (subBasin == null || subBasin.isBlank()) ? null : subBasin.trim().toUpperCase();
 
         Page<CycloneRepository.CycloneListRow> rows = cyclones.search(
-                like, basinCode, season,
+                like, basinCode, subBasinCode, season,
                 PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), MAX_PAGE_SIZE), sortOf(sort)));
 
         return PageResponse.of(rows, CycloneSummaryDto::from);
@@ -89,6 +92,22 @@ public class CycloneQueryService {
 
     public List<String> basins() {
         return cyclones.findBasins();
+    }
+
+    /**
+     * The sub-basins present in the archive, each with its basin and a display
+     * name. Codes IBTrACS leaves unnamed are dropped rather than shown raw.
+     */
+    public List<SubBasinDto> subBasins() {
+        return cyclones.findSubBasins().stream()
+                .map(row -> new SubBasinDto(
+                        row.getBasin(), row.getCode(), Basin.subBasinNameOf(row.getCode())))
+                .filter(dto -> dto.name() != null)
+                .toList();
+    }
+
+    /** One selectable sub-basin: which basin it is in, its code and its name. */
+    public record SubBasinDto(String basin, String code, String name) {
     }
 
     public Cyclone require(UUID id) {
@@ -127,6 +146,8 @@ public class CycloneQueryService {
                 cyclone.getName(),
                 cyclone.getBasin(),
                 Basin.nameOf(cyclone.getBasin()),
+                cyclone.getSubBasin(),
+                Basin.subBasinNameOf(cyclone.getSubBasin()),
                 cyclone.getSeasonYear(),
                 cyclone.getStatus(),
                 track.isEmpty() ? null : track.get(0).getObservedAt(),

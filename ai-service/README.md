@@ -12,10 +12,10 @@ and the complete project state for the next machine or agent is in
 
 | Analysis | State |
 | --- | --- |
-| Trajectory prediction | Trained and serving. Beats linear extrapolation in all six basins, by 10–20% at +24h. |
-| Intensity prediction | Trained and serving. Wind MAE 22–31% below persistence; trend accuracy 66% vs a 37% baseline. |
+| Trajectory prediction | Trained and serving on 654 held-out storms. 28.6 / 61.7 / 143.9 km mean error at +6/12/24h. Beats linear extrapolation at +24h in all six basins, by 5–17%; at +6h the South Pacific is a wash. |
+| Intensity prediction | Trained and serving. Wind MAE 22–31% below persistence; trend accuracy 68% vs a 42% baseline. Wind and pressure are scored on separate sample counts, because a third of North Indian Ocean fixes report a wind and no pressure. |
 | Satellite analysis | Architecture, training pipeline and source handling ready; **needs imagery**. Reports `NOT_AVAILABLE` until a checkpoint exists. |
-| Historical similarity | Analogue ensemble over 3,675 archive storms. Returns similar storms **and** an independent second forecast; at +24h it beats linear extrapolation by 4% (161 vs 168 km), below the neural track model (147 km). |
+| Historical similarity | Analogue ensemble over 4,178 archive storms. Returns similar storms **and** an independent second forecast. Weakest component: loses to linear extrapolation at +6h and +12h, beats it at +24h by 1.8% (157.9 vs 160.8 km), and is behind the neural track model at every horizon (143.9 km at +24h). Kept for traceability to named storms, not for accuracy. |
 | Explainability | Extension point only. |
 
 **Checkpoints are not committed** (they are large and regenerable), so a fresh

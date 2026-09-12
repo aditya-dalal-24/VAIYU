@@ -33,6 +33,7 @@ public interface CycloneRepository extends JpaRepository<Cyclone, UUID> {
                    c.externalId as externalId,
                    c.name as name,
                    c.basin as basin,
+                   c.subBasin as subBasin,
                    c.seasonYear as seasonYear,
                    c.status as status,
                    count(o.id) as observationCount,
@@ -42,15 +43,17 @@ public interface CycloneRepository extends JpaRepository<Cyclone, UUID> {
                    min(o.pressureHpa) as minPressureHpa
             from Cyclone c join c.observations o
             where (:basin is null or c.basin = :basin)
+              and (:subBasin is null or c.subBasin = :subBasin)
               and (:season is null or c.seasonYear = :season)
               and (:query is null or lower(coalesce(c.name, '')) like :query
                    or lower(c.externalId) like :query)
-            group by c.id, c.externalId, c.name, c.basin, c.seasonYear, c.status
+            group by c.id, c.externalId, c.name, c.basin, c.subBasin, c.seasonYear, c.status
             """,
             countQuery = """
             select count(distinct c.id)
             from Cyclone c join c.observations o
             where (:basin is null or c.basin = :basin)
+              and (:subBasin is null or c.subBasin = :subBasin)
               and (:season is null or c.seasonYear = :season)
               and (:query is null or lower(coalesce(c.name, '')) like :query
                    or lower(c.externalId) like :query)
@@ -58,6 +61,7 @@ public interface CycloneRepository extends JpaRepository<Cyclone, UUID> {
     Page<CycloneListRow> search(
             @Param("query") String query,
             @Param("basin") String basin,
+            @Param("subBasin") String subBasin,
             @Param("season") Integer season,
             Pageable pageable);
 
@@ -70,6 +74,8 @@ public interface CycloneRepository extends JpaRepository<Cyclone, UUID> {
         String getName();
 
         String getBasin();
+
+        String getSubBasin();
 
         Integer getSeasonYear();
 
@@ -88,6 +94,29 @@ public interface CycloneRepository extends JpaRepository<Cyclone, UUID> {
 
     @Query("select distinct c.seasonYear from Cyclone c where c.seasonYear is not null order by c.seasonYear desc")
     List<Integer> findSeasons();
+
+    /**
+     * Sub-basins that actually occur, with the basin each belongs to.
+     *
+     * <p>Paired with its basin because a sub-basin only means anything inside
+     * one: "AS" is the Arabian Sea within the North Indian Ocean, and offering
+     * it while the Atlantic is selected would be a filter that can only ever
+     * return nothing.
+     */
+    @Query("""
+            select distinct c.basin as basin, c.subBasin as code
+            from Cyclone c
+            where c.subBasin is not null
+            order by c.basin, c.subBasin
+            """)
+    List<SubBasinRow> findSubBasins();
+
+    /** Projection for {@link #findSubBasins}. */
+    interface SubBasinRow {
+        String getBasin();
+
+        String getCode();
+    }
 
     @Query("select distinct c.basin from Cyclone c where c.basin is not null order by c.basin")
     List<String> findBasins();

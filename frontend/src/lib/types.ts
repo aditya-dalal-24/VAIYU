@@ -54,6 +54,9 @@ export interface CycloneSummary {
   externalId: string;
   name: string | null;
   basin: string;
+  /** IBTrACS sub-basin code at genesis, e.g. AS or BB; null when not stated. */
+  subBasin: string | null;
+  subBasinName: string | null;
   seasonYear: number | null;
   status: string;
   observationCount: number;
@@ -67,6 +70,8 @@ export interface CycloneSummary {
 
 export interface CycloneDetail extends Omit<CycloneSummary, "observationCount"> {
   basinName: string;
+  subBasin: string | null;
+  subBasinName: string | null;
   latestObservation: Observation | null;
   peakObservation: Observation | null;
   dataQuality: DataQuality;
@@ -272,6 +277,22 @@ export interface StormDna {
   neighbours: StormNeighbour[];
   method: string;
   comparedWith: number;
+}
+
+/**
+ * A selectable sub-basin. Paired with its basin because a sub-basin only means
+ * something inside one: AS is the Arabian Sea within the North Indian Ocean.
+ */
+export interface SubBasinOption {
+  basin: string;
+  code: string;
+  name: string;
+}
+
+export interface FilterOptions {
+  seasons: number[];
+  basins: string[];
+  subBasins: SubBasinOption[];
 }
 
 export interface ApiErrorBody {

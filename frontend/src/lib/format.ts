@@ -35,6 +35,42 @@ export function fmtConfidence(value: number | null | undefined): string {
   return `${Math.round(value * 100)}%`;
 }
 
+/**
+ * A storm's name as the archive holds it.
+ *
+ * IBTrACS joins alternate names with a colon, because a storm that crosses
+ * basins is renamed by the next agency: the Pacific typhoon Matmo became
+ * Bulbul on entering the Bay of Bengal, and the archive stores "BULBUL:MATMO".
+ * Both names are kept — 46 storms have two, and which one a reader recognises
+ * depends on where they live — but separated so the value does not read as a
+ * data glitch.
+ */
+export function stormName(name: string | null | undefined, fallback: string): string {
+  if (!name) return fallback;
+  return name.includes(":") ? name.split(":").join(" / ") : name;
+}
+
+/**
+ * Basin codes, expanded.
+ *
+ * The backend already sends a `basinName` for a single storm, but the filter
+ * lists arrive as bare codes, and "NI" is not a thing most readers can name.
+ */
+export const BASIN_NAMES: Record<string, string> = {
+  NI: "North Indian Ocean",
+  SI: "South Indian Ocean",
+  NA: "North Atlantic",
+  SA: "South Atlantic",
+  EP: "East Pacific",
+  WP: "West Pacific",
+  SP: "South Pacific",
+};
+
+export function basinName(code: string | null | undefined): string {
+  if (!code) return ABSENT;
+  return BASIN_NAMES[code] ?? code;
+}
+
 export function fmtCoords(lat: number, lon: number): string {
   const ns = lat >= 0 ? "N" : "S";
   const ew = lon >= 0 ? "E" : "W";

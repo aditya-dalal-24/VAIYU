@@ -137,15 +137,17 @@ public class IbtracsImporter {
         for (Row row : firstByStorm.values()) {
             Instant lastFix = lastFixByStorm.get(row.stormId());
             String status = latest.minus(RECENT_WINDOW).isAfter(lastFix) ? "ARCHIVED" : "RECENT";
+            // `row` here is the storm's genesis fix, so both the basin and
+            // the sub-basin describe where it formed.
             stormBatch.add(new Object[]{
                     SOURCE, row.stormId(), displayName(row.stormName()),
-                    row.basin(), status, row.season()
+                    row.basin(), subBasinOrNull(row.subBasin()), status, row.season()
             });
         }
         jdbc.batchUpdate("""
                 INSERT INTO cyclones
-                    (external_source, external_id, name, basin, status, season_year)
-                VALUES (?, ?, ?, ?, ?, ?)
+                    (external_source, external_id, name, basin, sub_basin, status, season_year)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 -- The schema's unique index on these columns is partial
                 -- (both must be non-null), so the predicate is repeated here:
                 -- Postgres can only infer a partial index when it matches.
@@ -154,6 +156,7 @@ public class IbtracsImporter {
                 DO UPDATE
                     SET name = EXCLUDED.name,
                         basin = EXCLUDED.basin,
+                        sub_basin = EXCLUDED.sub_basin,
                         status = EXCLUDED.status,
                         season_year = EXCLUDED.season_year,
                         updated_at = now()
@@ -224,6 +227,24 @@ public class IbtracsImporter {
     }
 
     /**
+     * A sub-basin code, or null when IBTrACS does not state one.
+     *
+     * <p>IBTrACS writes MM for "missing". Stored as null so the interface can
+     * say nothing rather than showing a reader a sea the archive never named.
+     */
+    private static String subBasinOrNull(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String trimmed = raw.trim();
+        if (trimmed.isEmpty() || trimmed.equalsIgnoreCase("MM")
+                || trimmed.equalsIgnoreCase("NAN")) {
+            return null;
+        }
+        return trimmed.toUpperCase();
+    }
+
+    /**
      * IBTrACS writes unnamed storms as NOT_NAMED or UNNAMED. Keeping that as a
      * display name would put "NOT_NAMED" in the interface, so it becomes null
      * and the UI falls back to the storm id.
@@ -247,7 +268,7 @@ public class IbtracsImporter {
     private record Row(
             String stormId, Instant observedAt, double latitude, double longitude,
             Double windSpeedKph, Double pressureHpa, Integer season, String basin,
-            String stormName
+            String subBasin, String stormName
     ) {
     }
 
@@ -290,6 +311,9 @@ public class IbtracsImporter {
                             optionalDouble(parts, column.get("pressure_hpa")),
                             optionalInt(parts, column.get("season")),
                             optionalString(parts, column.get("basin")),
+                            // Older tables have no sub_basin column at all;
+                            // that reads as "not stated", not as an error.
+                            optionalString(parts, column.get("sub_basin")),
                             optionalString(parts, column.get("storm_name"))
                     ));
                 } catch (RuntimeException e) {

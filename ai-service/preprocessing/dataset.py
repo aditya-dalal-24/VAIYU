@@ -17,7 +17,9 @@ timestamp                    UTC       ISO-8601 parseable; required
 latitude                     degrees   -90..90; required
 longitude                    degrees   -180..180; required
 wind_speed_kph               kph       required for intensity targets
-pressure_hpa                 hPa       required for intensity targets
+pressure_hpa                 hPa       optional; absent values are masked out
+                                       of the intensity loss and metrics rather
+                                       than treated as no change
 movement_speed_kph           kph       optional
 movement_direction_degrees   degrees   optional, 0..360 clockwise from north
 season                       year      optional, enables a chronological split
@@ -143,7 +145,8 @@ class SupervisedSamples:
     position_targets: np.ndarray     # [n, horizons, 2]  (delta lat, delta lon)
     intensity_targets: np.ndarray    # [n, horizons, 2]  (delta wind, delta pressure)
     trend_targets: np.ndarray        # [n]               index into TREND_CLASSES
-    target_masks: np.ndarray         # [n, horizons]     1 where a real target exists
+    target_masks: np.ndarray         # [n, horizons]     1 where a real position target exists
+    intensity_masks: np.ndarray      # [n, horizons, 2]  1 per component that is real
     trend_mask: np.ndarray           # [n]               1 where a trend label exists
     cyclone_ids: np.ndarray          # [n]
     base_states: np.ndarray          # [n, 4] lat, lon, wind, pressure at T
@@ -163,6 +166,7 @@ class SupervisedSamples:
             intensity_targets=self.intensity_targets[index],
             trend_targets=self.trend_targets[index],
             target_masks=self.target_masks[index],
+            intensity_masks=self.intensity_masks[index],
             trend_mask=self.trend_mask[index],
             cyclone_ids=self.cyclone_ids[index],
             base_states=self.base_states[index],
@@ -283,6 +287,7 @@ def build_samples(
     intensity_targets: List[List[List[float]]] = []
     trend_targets: List[int] = []
     target_masks: List[List[float]] = []
+    intensity_masks: List[List[List[float]]] = []
     trend_masks: List[float] = []
     cyclone_ids: List[str] = []
     base_states: List[List[float]] = []
@@ -311,6 +316,7 @@ def build_samples(
             horizon_positions: List[List[float]] = []
             horizon_intensities: List[List[float]] = []
             horizon_mask: List[float] = []
+            horizon_intensity_mask: List[List[float]] = []
             longest_wind_delta: Optional[float] = None
 
             for horizon in horizons:
@@ -329,6 +335,7 @@ def build_samples(
                     horizon_positions.append([0.0, 0.0])
                     horizon_intensities.append([0.0, 0.0])
                     horizon_mask.append(0.0)
+                    horizon_intensity_mask.append([0.0, 0.0])
                     continue
 
                 horizon_positions.append(
@@ -338,20 +345,29 @@ def build_samples(
                     ]
                 )
 
-                if (
-                    current_wind is None
-                    or current_pressure is None
-                    or target.wind_speed_kph is None
-                    or target.pressure_hpa is None
-                ):
-                    # Position is usable even when intensity is not; the mask
-                    # is shared, so intensity training filters these later.
-                    horizon_intensities.append([0.0, 0.0])
-                else:
-                    wind_delta = target.wind_speed_kph - current_wind
-                    horizon_intensities.append(
-                        [wind_delta, target.pressure_hpa - current_pressure]
-                    )
+                # Wind and pressure are masked separately. A fix with a wind
+                # but no pressure reading -- a third of the North Indian Ocean
+                # archive -- still teaches the model about wind, while its
+                # pressure delta stays a placeholder that no loss and no metric
+                # is allowed to see. Sharing one mask here would train the model
+                # toward a fabricated "no change" in pressure and then report
+                # the fabrication as accuracy.
+                wind_known = current_wind is not None and target.wind_speed_kph is not None
+                pressure_known = (
+                    current_pressure is not None and target.pressure_hpa is not None
+                )
+
+                wind_delta = (
+                    target.wind_speed_kph - current_wind if wind_known else 0.0
+                )
+                pressure_delta = (
+                    target.pressure_hpa - current_pressure if pressure_known else 0.0
+                )
+                horizon_intensities.append([wind_delta, pressure_delta])
+                horizon_intensity_mask.append(
+                    [1.0 if wind_known else 0.0, 1.0 if pressure_known else 0.0]
+                )
+                if wind_known:
                     longest_wind_delta = wind_delta
 
                 horizon_mask.append(1.0)
@@ -365,6 +381,7 @@ def build_samples(
             position_targets.append(horizon_positions)
             intensity_targets.append(horizon_intensities)
             target_masks.append(horizon_mask)
+            intensity_masks.append(horizon_intensity_mask)
             cyclone_ids.append(str(cyclone_id))
             base_states.append(
                 [
@@ -396,6 +413,7 @@ def build_samples(
         intensity_targets=np.asarray(intensity_targets, dtype=np.float32),
         trend_targets=np.asarray(trend_targets, dtype=np.int64),
         target_masks=np.asarray(target_masks, dtype=np.float32),
+        intensity_masks=np.asarray(intensity_masks, dtype=np.float32),
         trend_mask=np.asarray(trend_masks, dtype=np.float32),
         cyclone_ids=np.asarray(cyclone_ids, dtype=object),
         base_states=np.asarray(base_states, dtype=np.float32),

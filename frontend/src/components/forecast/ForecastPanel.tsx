@@ -27,6 +27,7 @@ import {
   fmtMs,
   fmtPressure,
   fmtWind,
+  stormName,
   titleCase,
 } from "@/lib/format";
 import type { PredictionRun } from "@/lib/types";
@@ -327,10 +328,12 @@ function AnalogueSection({ run }: { run: PredictionRun }) {
                       params={{ id: match.cycloneId }}
                       className="truncate text-xs text-analogue hover:underline"
                     >
-                      {match.name ?? match.externalId}
+                      {stormName(match.name, match.externalId)}
                     </Link>
                   ) : (
-                    <span className="truncate text-xs">{match.name ?? match.externalId}</span>
+                    <span className="truncate text-xs">
+                      {stormName(match.name, match.externalId)}
+                    </span>
                   )}
                   <span className="num text-[0.6875rem] text-muted-foreground">
                     {match.seasonYear ?? ""}

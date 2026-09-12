@@ -339,3 +339,64 @@ class TestDegenerateFeatures:
             ),
             0.0,
         )
+
+
+class TestIntensityMaskIsPerComponent:
+    """A fix with a wind but no pressure must teach wind and nothing else.
+
+    Two thirds of North Indian Ocean fixes carry a wind; only a third carry a
+    pressure. Sharing one mask between the two components would train the
+    pressure head toward a fabricated "no change" on every pressure-less fix,
+    and then report that fabrication as accuracy.
+    """
+
+    @staticmethod
+    def _frame_without_pressure(steps: int = 12) -> pd.DataFrame:
+        frame = track_frame(steps=steps)
+        frame["pressure_hpa"] = np.nan
+        return frame
+
+    def test_wind_is_learnable_without_any_pressure(self):
+        samples = build_samples(self._frame_without_pressure(), horizons=[6, 12])
+
+        assert len(samples) > 0
+        wind_mask = samples.intensity_masks[..., 0]
+        pressure_mask = samples.intensity_masks[..., 1]
+
+        assert wind_mask.sum() > 0, "wind targets exist and must be trainable"
+        assert pressure_mask.sum() == 0, "no pressure was reported, so none is trainable"
+
+    def test_position_targets_survive_a_missing_pressure(self):
+        samples = build_samples(self._frame_without_pressure(), horizons=[6, 12])
+
+        # The whole point of relaxing the pressure requirement: these tracks
+        # still train the trajectory model.
+        assert samples.target_masks.sum() > 0
+
+    def test_a_masked_pressure_delta_is_a_placeholder_not_a_measurement(self):
+        samples = build_samples(self._frame_without_pressure(), horizons=[6])
+
+        masked = samples.intensity_masks[..., 1] == 0
+        assert masked.all()
+        # The value is present in the array but must never be read; assert it
+        # is the inert placeholder rather than something that looks real.
+        assert np.all(samples.intensity_targets[..., 1][masked] == 0.0)
+
+    def test_both_components_are_trainable_when_both_are_reported(self):
+        samples = build_samples(track_frame(), horizons=[6, 12])
+
+        assert samples.intensity_masks[..., 0].sum() > 0
+        assert samples.intensity_masks[..., 1].sum() > 0
+        # With complete data the component masks agree with the horizon mask,
+        # so this change cannot alter results for pressure-complete archives.
+        assert np.array_equal(samples.intensity_masks[..., 0], samples.target_masks)
+        assert np.array_equal(samples.intensity_masks[..., 1], samples.target_masks)
+
+    def test_mixed_reporting_masks_only_the_gaps(self):
+        frame = track_frame(steps=12)
+        frame.loc[frame.index[6:], "pressure_hpa"] = np.nan
+        samples = build_samples(frame, horizons=[6])
+
+        pressure_mask = samples.intensity_masks[..., 1]
+        wind_mask = samples.intensity_masks[..., 0]
+        assert 0 < pressure_mask.sum() < wind_mask.sum()

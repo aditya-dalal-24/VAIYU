@@ -89,7 +89,7 @@ ai-service/trained_models/
 # Local run logs and the throwaway browser-verification script, which hardcodes
 # absolute output paths for this machine.
 backend/run.log
-ai-service/uvicorn.log
+ai-service/*.log
 frontend/vaiyu-shot.mjs
 
 # ==================================================

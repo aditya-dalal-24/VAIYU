@@ -35,19 +35,22 @@ public class CycloneController {
      * of storms and sending all of them would be slow and useless.
      *
      * @param query  matches storm name or IBTrACS identifier
-     * @param basin  IBTrACS basin code, e.g. NI
-     * @param season season year
+     * @param basin    IBTrACS basin code, e.g. NI
+     * @param subBasin IBTrACS sub-basin code, e.g. AS for the Arabian Sea or
+     *                 BB for the Bay of Bengal
+     * @param season   season year
      * @param sort   recent (default), intensity, pressure, name, observations, oldest
      */
     @GetMapping
     public PageResponse<CycloneSummaryDto> search(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String basin,
+            @RequestParam(required = false) String subBasin,
             @RequestParam(required = false) Integer season,
             @RequestParam(required = false) String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "25") int size) {
-        return cyclones.search(query, basin, season, sort, page, size);
+        return cyclones.search(query, basin, subBasin, season, sort, page, size);
     }
 
     /** Filter values that actually exist in the data, for building the UI. */
@@ -55,7 +58,8 @@ public class CycloneController {
     public Map<String, Object> filters() {
         return Map.of(
                 "seasons", cyclones.seasons(),
-                "basins", cyclones.basins());
+                "basins", cyclones.basins(),
+                "subBasins", cyclones.subBasins());
     }
 
     @GetMapping("/{id}")

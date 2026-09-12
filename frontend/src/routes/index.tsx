@@ -32,6 +32,7 @@ import {
   fmtHours,
   fmtPressure,
   fmtWind,
+  stormName,
 } from "@/lib/format";
 import {
   useCyclone,
@@ -134,7 +135,7 @@ function MissionControl() {
             <div className="pointer-events-none absolute left-3 top-3 z-[400] panel px-3 py-2">
               <div className="flex items-baseline gap-2">
                 <h1 className="font-display text-base leading-none">
-                  {detail.data.name ?? detail.data.externalId}
+                  {stormName(detail.data.name, detail.data.externalId)}
                 </h1>
                 <span className="num text-[0.6875rem] text-muted-foreground">
                   {detail.data.seasonYear}
@@ -142,6 +143,9 @@ function MissionControl() {
               </div>
               <div className="mt-1 flex items-center gap-2">
                 <span className="label-xs">{detail.data.basinName}</span>
+                {detail.data.subBasinName ? (
+                  <span className="label-xs text-observed">{detail.data.subBasinName}</span>
+                ) : null}
                 <span className="num text-[0.625rem] text-muted-foreground">
                   {detail.data.externalId}
                 </span>

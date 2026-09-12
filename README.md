@@ -41,50 +41,130 @@ losing its history.
 | Source | IBTrACS v04r01, NOAA/NCEI best-track archive |
 | Wind column | `USA_WIND`, 1-minute sustained |
 | Fixes | Synoptic only — 00/06/12/18Z |
-| Span | 1980 – 2026, 3,829 storms, 90,537 fixes |
-| Basins | WP 1226, EP 699, SI 673, NA 654, SP 409, NI 167, SA 1 |
+| Span | 1980 – 2026, 4,305 storms, 109,009 fixes |
+| Basins | WP 1271, EP 937, SI 736, NA 710, SP 451, NI 199, SA 1 |
+| North Indian Ocean | Bay of Bengal 136, Arabian Sea 63 |
 | Scale | Saffir-Simpson, which is defined for 1-minute winds |
 
-Two choices in that table are load-bearing. `USA_WIND` is used alone because
-`WMO_WIND` mixes 1-, 3- and 10-minute averaging periods between agencies, so
-comparing its values across basins compares different quantities. And only
-synoptic rows are kept because IBTrACS interpolates the intermediate 3-hourly
-rows from fixes on both sides — including later ones. Training on those rows let
-the model read forward in time, and they were 42% of the original table.
+A storm is filed under the basin and sub-basin it **formed** in, which is why
+those counts sum to the total exactly. Twenty more storms formed elsewhere and
+later moved into the North Indian Ocean, and IBTrACS records both names for
+them: the Pacific storm Matmo became Bulbul on entering the Bay of Bengal in
+2019, and the archive stores it as `BULBUL:MATMO`.
+
+Four choices in that table are load-bearing.
+
+`USA_WIND` is used alone because `WMO_WIND` mixes 1-, 3- and 10-minute
+averaging periods between agencies, so comparing its values across basins
+compares different quantities.
+
+Only synoptic rows are kept because IBTrACS interpolates the intermediate
+3-hourly rows from fixes on both sides — including later ones. Training on those
+rows let the model read forward in time, and they were 42% of the original
+table.
+
+A fix needs a position and a wind, but **not** a pressure. Requiring one threw
+away 18,472 fixes and 476 whole storms, and it fell hardest where the data is
+thinnest: two thirds of North Indian Ocean fixes report a wind and only two
+thirds of those also report a pressure. The models are built for this — the
+step features carry a `pressure_present` flag, training applies pressure
+dropout, and the intensity loss and metrics mask the pressure component per fix
+so an absent reading contributes nothing rather than being learned as "no
+change".
+
+Uncoded fixes (IBTrACS `NATURE = NR`) are kept, but only inside storms coded
+tropical somewhere in their track. Measured against this archive they sit at a
+median 12.7° of latitude against 41.5° for extratropical ones, and 416 of the
+563 storms carrying them are coded tropical elsewhere — they are gap-coding
+within a real storm. The live adapter already accepted them, so excluding them
+had made training disagree with what the running service is handed. The 190
+storms that are *never* coded tropical stay out: nothing in the archive says
+what they were.
+
+The **Arabian Sea** and the **Bay of Bengal** are one IBTrACS basin (NI) but two
+seas on opposite sides of the Indian peninsula, so the sub-basin is stored and
+filterable in its own right. It is taken from the storm's genesis fix, the same
+rule already used for the basin.
 
 ## The models
 
-Measured on held-out **storms**, never held-out rows: every fix of a storm is
-in exactly one split, so nothing is scored against a storm it trained on.
+Measured on 654 held-out **storms**, never held-out rows: every fix of a storm
+is in exactly one split, so nothing is scored against a storm it trained on.
 
 **Track** — GRU over up to 12 past fixes, 20 features per step.
 
-| Horizon | Mean error | Persistence | Linear extrapolation |
-| --- | --- | --- | --- |
-| +6h | 28.8 km | 105.1 km | 31.8 km |
-| +12h | 62.8 km | 205.8 km | 72.4 km |
-| +24h | 146.6 km | 396.4 km | 175.5 km |
+| Horizon | Mean error | Median | Persistence | Linear extrapolation |
+| --- | --- | --- | --- | --- |
+| +6h | 28.6 km | 23.6 km | 105.0 km | 30.8 km |
+| +12h | 61.7 km | 51.8 km | 206.1 km | 68.8 km |
+| +24h | 143.9 km | 122.2 km | 400.0 km | 166.2 km |
+
+Per basin, with the margin over linear extrapolation at +24h — the comparison
+that shows the model learned how tracks curve in that basin, rather than just
+that storms keep moving:
+
+| Basin | Held-out storms | +6h | +12h | +24h | vs linear at +24h |
+| --- | --- | --- | --- | --- | --- |
+| East/Central Pacific | 131 | 22 km | 47 km | 110 km | 10% better |
+| North Atlantic | 152 | 32 km | 70 km | 165 km | 17% better |
+| **North Indian Ocean** | 38 | 32 km | 62 km | 136 km | 14% better |
+| South Indian | 102 | 27 km | 58 km | 136 km | 11% better |
+| South Pacific | 59 | 34 km | 75 km | 182 km | 5% better |
+| West Pacific | 207 | 29 km | 63 km | 145 km | 16% better |
+
+Two honest notes on that table. The North Indian Ocean row rests on 38 held-out
+storms, the fewest of any basin, so its margin carries the widest error bars.
+And at **+6h** the South Pacific is a wash — 34 km against the baseline's 33 —
+so "beats linear in every basin" is true at +24h and not at every horizon.
+
+Forecasting the same held-out storms with **pressure withheld entirely** costs
+under 0.3 km at every horizon (28.7 / 61.8 / 144.1 km). That is what the
+`pressure_present` flag is for, and it is why the archive can include storms
+that never reported a pressure: the model degrades gracefully on them instead
+of mispredicting them.
 
 **Intensity** — same encoder, wind and pressure regression plus a three-class
 trend head.
 
-| Horizon | Wind MAE | Persistence | Pressure MAE | Persistence |
-| --- | --- | --- | --- | --- |
-| +6h | 6.4 kph | 8.3 kph | 2.5 hPa | 3.2 hPa |
-| +12h | 11.3 kph | 15.8 kph | 4.4 hPa | 6.0 hPa |
-| +24h | 19.8 kph | 28.6 kph | 7.8 hPa | 11.0 hPa |
+| Horizon | Wind MAE | Persistence | Wind n | Pressure MAE | Persistence | Pressure n |
+| --- | --- | --- | --- | --- | --- | --- |
+| +6h | 5.9 kph | 7.5 kph | 14,842 | 2.5 hPa | 3.1 hPa | 12,313 |
+| +12h | 10.3 kph | 14.4 kph | 14,154 | 4.3 hPa | 6.0 hPa | 11,744 |
+| +24h | 18.0 kph | 26.2 kph | 12,855 | 7.7 hPa | 10.9 hPa | 10,613 |
 
-Trend accuracy 65.9% against a 36.9% majority-class baseline.
+Trend accuracy 68.1% against a 42.0% majority-class baseline.
 
-**Analogue ensemble** — nearest neighbours over 69,984 track windows from 3,675
+The two sample counts differ on purpose, and the gap is the honesty fix made
+visible: 2,529 held-out samples at +6h have a wind target and no pressure
+target, so they score the wind head and are excluded from the pressure figure
+entirely. Counting them would have meant scoring the model against a pressure
+change of zero that nobody measured — and it would have flattered the pressure
+MAE precisely where reporting is thinnest.
+
+**Analogue ensemble** — nearest neighbours over 86,093 track windows from 4,178
 storms, matched on recent curvature rather than absolute displacement, with the
-ten closest averaged into an independent second forecast. It carries a real
-caveat: at +24h it beats linear extrapolation (160.9 vs 167.7 km) but at +6h it
-does not (30.3 vs 29.8 km), and it is behind the neural track model at every
-horizon. It is in the product because a forecast built only from named past
-storms is inspectable in a way a network's output is not, and because the
-spread across its members is an honest, if weak, uncertainty signal
-(spread/error correlation ≈ 0.30).
+ten closest averaged into an independent second forecast.
+
+It is the weakest component here, and the wider archive made it weaker as a
+forecaster rather than stronger:
+
+| Horizon | Analogue | Linear extrapolation | Neural track model |
+| --- | --- | --- | --- |
+| +6h | 29.9 km | 28.8 km | 28.6 km |
+| +12h | 66.1 km | 65.4 km | 61.7 km |
+| +24h | 157.9 km | 160.8 km | 143.9 km |
+
+So it now loses to plain linear extrapolation at +6h and +12h, and beats it at
++24h by only 1.8% — down from 4% before, because the added sparsely-reported
+storms are ones a straight line predicts well. Its member spread correlates
+with its own error at only 0.22–0.25, so it is a weak uncertainty signal.
+
+It stays in the product for the one thing it does that no network does: every
+number it produces is traceable to named storms a reader can go and look at.
+Asked about Mocha in 2023 it returns Mala 2006 — which also crossed the Bay of
+Bengal into Myanmar's Rakhine coast in May — and that is an argument a
+forecaster can check. It is presented as a second opinion, never as the
+forecast, and the console draws it in its own colour for that reason.
 
 **Storm DNA** — the one analysis here with no model in it. A storm's whole
 life is reduced to nine measured traits — how long it lasted, how strong and

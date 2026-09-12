@@ -14,13 +14,28 @@ quantity. Training across that bakes in a systematic bias that never shows up
 as an error. Pressure is a central minimum rather than an average, so
 ``WMO_PRES`` is a safe fallback where ``USA_PRES`` is missing.
 
-**Only tropical (``NATURE == TS``) fixes are kept.** Extratropical, subtropical
-and disturbance stages are a different physical regime, and would teach the
-model motion it will never be asked to forecast. Uncoded (``NR``) fixes are also
-left out, deliberately, even though the live adapter accepts them: they are
-mostly the weak uncoded ends of otherwise-tropical storms, and the measurement
-behind that choice is recorded at ``TROPICAL_NATURES`` in
-``preprocessing/ibtracs_live.py``.
+**Only tropical stages are kept.** Extratropical, subtropical, disturbance and
+mixed fixes are a different physical regime and would teach the model motion it
+will never be asked to forecast. Uncoded (``NR``) fixes are kept, but only
+inside storms that are coded ``TS`` somewhere in their track: measured against
+this archive, such fixes sit at a median 12.7 degrees of latitude against 41.5
+for extratropical ones, and 416 of the 563 storms carrying them are coded
+tropical elsewhere, so they are gap-coding within a real storm rather than a
+different phenomenon. The live adapter already accepts ``NR``
+(``TROPICAL_NATURES`` in ``preprocessing/ibtracs_live.py``), so excluding them
+here made training disagree with what the running service is handed. The 190
+storms that are *never* coded tropical are still excluded: nothing in the
+archive says what they were.
+
+**Pressure is optional; wind is not.** A fix needs a position and a wind to be
+usable, because every sequence feature and every target is built from those.
+Requiring a central pressure as well discarded 14,000 fixes and 476 whole
+storms, and it fell hardest exactly where the data is thinnest: two thirds of
+North Indian Ocean fixes report a wind, but only two thirds of those also
+report a pressure. The models were built for this -- the step features carry a
+``pressure_present`` flag and training applies pressure dropout -- and the
+intensity loss and metrics mask the pressure component per fix, so an absent
+reading contributes nothing rather than being learned as no change.
 
 **Only synoptic fixes (00/06/12/18Z) are kept.** IBTrACS resamples every track
 to three-hourly, but the 03/09/15/21Z rows are interpolations *between* reported
@@ -58,8 +73,11 @@ logger = logging.getLogger(__name__)
 
 KNOTS_TO_KPH = 1.852
 
-# IBTrACS marks the tropical-cyclone stage as TS.
+# IBTrACS marks the tropical-cyclone stage as TS. NR means no agency coded the
+# nature of that fix; see the module docstring for why those are kept only
+# within storms that are coded TS somewhere.
 TROPICAL_NATURE = "TS"
+UNCODED_NATURE = "NR"
 
 SOURCE_COLUMNS = [
     "SID", "SEASON", "BASIN", "SUBBASIN", "NAME", "ISO_TIME", "NATURE",
@@ -90,8 +108,18 @@ def convert(input_path: str, basins=None) -> pd.DataFrame:
     for column in NUMERIC_COLUMNS:
         frame[column] = pd.to_numeric(frame[column], errors="coerce")
 
-    frame = frame[frame["NATURE"] == TROPICAL_NATURE]
-    logger.info("%d tropical-stage rows", len(frame))
+    tropical_storms = set(frame.loc[frame["NATURE"] == TROPICAL_NATURE, "SID"].unique())
+    keep_nature = (
+        frame["NATURE"].isin([TROPICAL_NATURE, UNCODED_NATURE])
+        & frame["SID"].isin(tropical_storms)
+    )
+    uncoded = int(((frame["NATURE"] == UNCODED_NATURE) & keep_nature).sum())
+    frame = frame[keep_nature]
+    logger.info(
+        "%d tropical-stage rows (%d of them uncoded fixes inside tropical storms)",
+        len(frame),
+        uncoded,
+    )
 
     # Interpolated rows read forward in time; see the module docstring. The
     # same hours are used by the live adapter, so training and serving agree by
@@ -120,16 +148,24 @@ def convert(input_path: str, basins=None) -> pd.DataFrame:
             "pressure_hpa": frame["USA_PRES"].fillna(frame["WMO_PRES"]),
             "season": frame["SEASON"],
             "basin": frame["BASIN"],
+            # Arabian Sea (AS) and Bay of Bengal (BB) are sub-basins of the
+            # North Indian Ocean, and the distinction is the one people in the
+            # region actually use.
+            "sub_basin": frame["SUBBASIN"],
             "storm_name": frame["NAME"],
         }
     )
 
     before = len(table)
     table = table.dropna(
-        subset=["cyclone_id", "timestamp", "latitude", "longitude",
-                "wind_speed_kph", "pressure_hpa"]
+        subset=["cyclone_id", "timestamp", "latitude", "longitude", "wind_speed_kph"]
     )
-    logger.info("%d rows have a complete fix (dropped %d)", len(table), before - len(table))
+    logger.info(
+        "%d rows have a position and a wind (dropped %d); %d of those also report a pressure",
+        len(table),
+        before - len(table),
+        int(table["pressure_hpa"].notna().sum()),
+    )
 
     table = table.drop_duplicates(subset=["cyclone_id", "timestamp"])
 
@@ -172,6 +208,12 @@ def main() -> None:
         table["timestamp"].max().date(),
     )
     logger.info("per basin: %s", table.groupby("basin")["cyclone_id"].nunique().to_dict())
+    north_indian = table[table["basin"] == "NI"]
+    if not north_indian.empty:
+        logger.info(
+            "north Indian Ocean sub-basins: %s",
+            north_indian.groupby("sub_basin")["cyclone_id"].nunique().to_dict(),
+        )
 
 
 if __name__ == "__main__":

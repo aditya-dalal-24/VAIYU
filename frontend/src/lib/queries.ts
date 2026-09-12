@@ -50,6 +50,7 @@ export function useFilters() {
 export function useCyclones(params: {
   query?: string | undefined;
   basin?: string | undefined;
+  subBasin?: string | undefined;
   season?: number | undefined;
   sort?: string | undefined;
   page?: number | undefined;

@@ -30,6 +30,7 @@ import {
   fmtHours,
   fmtPressure,
   fmtWind,
+  stormName,
 } from "@/lib/format";
 import {
   useCyclone,
@@ -104,13 +105,21 @@ function StormProfile() {
           <div className="min-w-0">
             <div className="flex items-baseline gap-2">
               <h1 className="font-display text-xl leading-none">
-                {storm.name ?? storm.externalId}
+                {stormName(storm.name, storm.externalId)}
               </h1>
               <span className="num text-xs text-muted-foreground">{storm.seasonYear}</span>
               <CategoryChip category={storm.peakCategory} rank={storm.peakCategoryRank} />
             </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-3">
               <span className="label-xs">{storm.basinName}</span>
+              {/*
+                For a North Indian Ocean storm this is the line that matters
+                locally: the Arabian Sea and the Bay of Bengal are one IBTrACS
+                basin but two seas, on opposite sides of the peninsula.
+              */}
+              {storm.subBasinName ? (
+                <span className="label-xs text-observed">{storm.subBasinName}</span>
+              ) : null}
               <span className="num text-[0.6875rem] text-muted-foreground">{storm.externalId}</span>
               <span className="label-xs">{storm.status}</span>
             </div>

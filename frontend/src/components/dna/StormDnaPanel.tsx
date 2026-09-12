@@ -13,7 +13,7 @@
 import { Link } from "@tanstack/react-router";
 
 import { Empty, Metric, Panel, Provenance, Skeleton } from "@/components/console/primitives";
-import { ABSENT, fmtKm, fmtNumber, fmtPressure, fmtWind } from "@/lib/format";
+import { ABSENT, fmtKm, fmtNumber, fmtPressure, fmtWind, stormName } from "@/lib/format";
 import { useStormDna } from "@/lib/queries";
 import type { StormSignature } from "@/lib/types";
 
@@ -257,7 +257,7 @@ export function StormDnaPanel({ cycloneId }: { cycloneId: string }) {
                   <tr className="border-b border-border/60 bg-accent/40">
                     <td className="py-1.5 pr-2">
                       <span className="text-foreground">
-                        {signature.name ?? signature.externalId}
+                        {stormName(signature.name, signature.externalId)}
                       </span>{" "}
                       <span className="text-muted-foreground">{signature.seasonYear}</span>
                       <span className="ml-1 text-[0.625rem] text-muted-foreground">
@@ -281,7 +281,7 @@ export function StormDnaPanel({ cycloneId }: { cycloneId: string }) {
                         >
                           <span className="text-muted-foreground">#{index + 1}</span>{" "}
                           <span className="text-foreground">
-                            {neighbour.name ?? neighbour.externalId}
+                            {stormName(neighbour.name, neighbour.externalId)}
                           </span>{" "}
                           <span className="text-muted-foreground">{neighbour.seasonYear}</span>
                           <span className="ml-1 text-[0.625rem] text-muted-foreground">

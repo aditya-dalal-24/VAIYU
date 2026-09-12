@@ -91,15 +91,23 @@ def evaluate_intensity(
     per_horizon: Dict[str, Dict[str, float]] = {}
 
     for position, horizon in enumerate(horizons):
-        mask = samples.target_masks[:, position] > 0
-        if not mask.any():
+        if not (samples.intensity_masks[:, position] > 0).any():
             continue
 
-        scores: Dict[str, float] = {"n": int(mask.sum())}
+        scores: Dict[str, float] = {}
 
         for offset, (quantity, unit) in enumerate(
             (("wind", "kph"), ("pressure", "hPa"))
         ):
+            # Each component is scored only where that component is real. A
+            # pressure-less fix must not be counted as a perfectly predicted
+            # "no change", which is what a shared mask would do -- and it would
+            # flatter the pressure MAE exactly where the data is thinnest.
+            mask = samples.intensity_masks[:, position, offset] > 0
+            if not mask.any():
+                continue
+            scores[f"{quantity}_n"] = int(mask.sum())
+
             actual = samples.intensity_targets[mask, position, offset]
             predicted = deltas[mask, position, offset]
 
@@ -160,10 +168,13 @@ def format_report(metrics: Dict[str, object]) -> List[str]:
     """Human-readable lines for logging after an evaluation run."""
     lines: List[str] = []
     for horizon, scores in (metrics.get("per_horizon") or {}).items():
+        # The two counts are reported separately because they differ: a fix
+        # with a wind and no pressure scores the wind head only.
         lines.append(
-            f"+{horizon:<4} wind MAE {scores.get('wind_mae_kph', float('nan')):7.2f} kph | "
+            f"+{horizon:<4} wind MAE {scores.get('wind_mae_kph', float('nan')):7.2f} kph "
+            f"(n={scores.get('wind_n', 0)}) | "
             f"pressure MAE {scores.get('pressure_mae_hPa', float('nan')):7.2f} hPa "
-            f"(n={scores['n']})"
+            f"(n={scores.get('pressure_n', 0)})"
         )
     trend = metrics.get("trend") or {}
     if "accuracy" in trend:

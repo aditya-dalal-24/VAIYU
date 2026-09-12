@@ -1,5 +1,6 @@
 package com.vaiyu.dto;
 
+import com.vaiyu.domain.Basin;
 import com.vaiyu.domain.IntensityScale;
 import com.vaiyu.repository.CycloneRepository.CycloneListRow;
 
@@ -12,6 +13,9 @@ public record CycloneSummaryDto(
         String externalId,
         String name,
         String basin,
+        String subBasin,
+        /** Expanded for display, or null when IBTrACS states no sub-basin. */
+        String subBasinName,
         Integer seasonYear,
         String status,
         long observationCount,
@@ -28,6 +32,8 @@ public record CycloneSummaryDto(
                 row.getExternalId(),
                 row.getName(),
                 row.getBasin(),
+                row.getSubBasin(),
+                Basin.subBasinNameOf(row.getSubBasin()),
                 row.getSeasonYear(),
                 row.getStatus(),
                 row.getObservationCount(),

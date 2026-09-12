@@ -248,6 +248,15 @@ these optional, so a missing value is filled with a neutral default *and*
 flagged as absent — the model can then distinguish "missing" from "genuinely
 this value", which silent imputation would hide.
 
+**Where the pressure-less fixes come from.** Until the archive was rebuilt, the
+IBTrACS adapter required a central pressure on every fix, so the flag was
+exercised only by the synthetic dropout below. Dropping that requirement added
+18,472 fixes and 476 whole storms — the North Indian Ocean gained 41, a fifth of
+what it had, because two thirds of its wind-bearing fixes report no pressure.
+Those fixes now train the trajectory model and the wind head, while the
+intensity loss and its metrics mask the pressure component per fix, so an
+absent reading contributes nothing rather than being learned as "no change".
+
 **Why 1.1 exists.** Feature set 1.0 had a real bug: pressure is optional in the
 contract, and a missing value entered the model as 0 hPa — far outside anything
 in training — so a trajectory request without pressure returned `COMPLETED` with
