@@ -66,11 +66,7 @@ function SatelliteIntelligence() {
   return (
     <div className="flex h-full min-h-0 gap-2 p-2">
       <aside className="hidden w-[240px] shrink-0 lg:block">
-        <StormPicker
-          selectedId={storm?.id ?? null}
-          onSelect={setStorm}
-          className="h-full"
-        />
+        <StormPicker selectedId={storm?.id ?? null} onSelect={setStorm} className="h-full" />
       </aside>
 
       <div className="grid min-h-0 flex-1 gap-2 lg:grid-cols-[380px_1fr]">
@@ -79,11 +75,7 @@ function SatelliteIntelligence() {
             {!status.data ? (
               <p className="label-xs">Checking…</p>
             ) : !status.data.ai.reachable ? (
-              <Empty
-                tone="warning"
-                title="AI service offline"
-                detail={status.data.ai.detail}
-              />
+              <Empty tone="warning" title="AI service offline" detail={status.data.ai.detail} />
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-3">
@@ -129,8 +121,8 @@ function SatelliteIntelligence() {
                 )}
               </p>
               <p className="mt-1 text-[0.625rem] leading-relaxed text-muted-foreground">
-                The storm's latest reported fix is sent with the image, because the analysis
-                request carries a position and inventing one would be fabricated input.
+                The storm's latest reported fix is sent with the image, because the analysis request
+                carries a position and inventing one would be fabricated input.
               </p>
             </div>
 
@@ -163,24 +155,18 @@ function SatelliteIntelligence() {
                 className="mt-1 w-full rounded border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-input"
               />
               <span className="mt-1 block text-[0.625rem] leading-relaxed text-muted-foreground">
-                Optional. Naming the sensor lets the model use what it learned for that
-                instrument; without it the result is flagged as an unknown source.
+                Optional. Naming the sensor lets the model use what it learned for that instrument;
+                without it the result is flagged as an unknown source.
               </span>
             </label>
 
-            <Button
-              variant="primary"
-              disabled={!canSubmit || analyse.isPending}
-              onClick={submit}
-            >
+            <Button variant="primary" disabled={!canSubmit || analyse.isPending} onClick={submit}>
               {analyse.isPending ? "Analysing…" : "Send to model"}
             </Button>
 
             {analyse.error ? (
               <p className="text-[0.6875rem] leading-relaxed text-destructive">
-                {analyse.error instanceof ApiError
-                  ? analyse.error.message
-                  : String(analyse.error)}
+                {analyse.error instanceof ApiError ? analyse.error.message : String(analyse.error)}
               </p>
             ) : null}
           </Panel>
@@ -263,15 +249,13 @@ function AnalysisResult({ analysis }: { analysis: SatelliteAnalysis }) {
           <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
             <Metric
               label="Cyclone detected"
-              value={analysis.cycloneDetected === null ? "—" : analysis.cycloneDetected ? "Yes" : "No"}
+              value={
+                analysis.cycloneDetected === null ? "—" : analysis.cycloneDetected ? "Yes" : "No"
+              }
               source="model"
               accent={analysis.cycloneDetected ? "var(--model)" : undefined}
             />
-            <Metric
-              label="Confidence"
-              value={fmtConfidence(analysis.confidence)}
-              source="model"
-            />
+            <Metric label="Confidence" value={fmtConfidence(analysis.confidence)} source="model" />
             <Metric
               label="Centre"
               value={
@@ -314,8 +298,8 @@ function AnalysisResult({ analysis }: { analysis: SatelliteAnalysis }) {
           ) : (
             <div className="flex h-full min-h-32 items-center justify-center rounded border border-border graticule px-4 text-center">
               <p className="text-[0.6875rem] leading-relaxed text-muted-foreground">
-                No attention overlay. The model does not produce one yet, so nothing is shown
-                here rather than an illustration.
+                No attention overlay. The model does not produce one yet, so nothing is shown here
+                rather than an illustration.
               </p>
             </div>
           )}

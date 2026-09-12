@@ -13,9 +13,7 @@ import { Suspense, lazy } from "react";
 import { ClientOnly } from "@/components/ui/client-only";
 import type { StormMapProps } from "./StormMap";
 
-const StormMap = lazy(() =>
-  import("./StormMap").then((module) => ({ default: module.StormMap })),
-);
+const StormMap = lazy(() => import("./StormMap").then((module) => ({ default: module.StormMap })));
 
 function MapPlaceholder() {
   return <div className="graticule h-full w-full" aria-hidden />;

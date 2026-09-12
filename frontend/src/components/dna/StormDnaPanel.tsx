@@ -12,7 +12,7 @@
 
 import { Link } from "@tanstack/react-router";
 
-import { Button, Empty, Metric, Panel, Provenance, Skeleton } from "@/components/console/primitives";
+import { Empty, Metric, Panel, Provenance, Skeleton } from "@/components/console/primitives";
 import { ABSENT, fmtKm, fmtNumber, fmtPressure, fmtWind } from "@/lib/format";
 import { useStormDna } from "@/lib/queries";
 import type { StormSignature } from "@/lib/types";
@@ -62,22 +62,34 @@ function SignatureGrid({ signature }: { signature: StormSignature }) {
       <div>
         <p className="label-xs mb-1.5">Life</p>
         <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 sm:grid-cols-4">
-          <Metric label="Lifetime" value={fmtHoursShort(signature.lifetimeHours)} source="observed" />
+          <Metric
+            label="Lifetime"
+            value={fmtHoursShort(signature.lifetimeHours)}
+            source="observed"
+          />
           <Metric label="Fixes" value={String(signature.fixCount)} source="observed" />
           <Metric label="Peak wind" value={fmtWind(signature.peakWindKph)} source="observed" />
-          <Metric label="Min pressure" value={fmtPressure(signature.minPressureHpa)} source="observed" />
+          <Metric
+            label="Min pressure"
+            value={fmtPressure(signature.minPressureHpa)}
+            source="observed"
+          />
           <Metric
             label="Formed at"
-            value={signature.genesisLatitude === null || signature.genesisLatitude === undefined
-              ? ABSENT
-              : `${Math.abs(signature.genesisLatitude).toFixed(1)}°${signature.genesisLatitude >= 0 ? "N" : "S"}`}
+            value={
+              signature.genesisLatitude === null || signature.genesisLatitude === undefined
+                ? ABSENT
+                : `${Math.abs(signature.genesisLatitude).toFixed(1)}°${signature.genesisLatitude >= 0 ? "N" : "S"}`
+            }
             source="observed"
           />
           <Metric
             label="Peaked at"
-            value={signature.peakLatitude === null || signature.peakLatitude === undefined
-              ? ABSENT
-              : `${Math.abs(signature.peakLatitude).toFixed(1)}°${signature.peakLatitude >= 0 ? "N" : "S"}`}
+            value={
+              signature.peakLatitude === null || signature.peakLatitude === undefined
+                ? ABSENT
+                : `${Math.abs(signature.peakLatitude).toFixed(1)}°${signature.peakLatitude >= 0 ? "N" : "S"}`
+            }
             source="observed"
           />
           <Metric
@@ -96,16 +108,32 @@ function SignatureGrid({ signature }: { signature: StormSignature }) {
       <div className="border-t border-border pt-2.5">
         <p className="label-xs mb-1.5">Track</p>
         <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 sm:grid-cols-4">
-          <Metric label="Distance travelled" value={fmtKm(signature.trackLengthKm)} source="observed" />
-          <Metric label="Start to end" value={fmtKm(signature.netDisplacementKm)} source="observed" />
+          <Metric
+            label="Distance travelled"
+            value={fmtKm(signature.trackLengthKm)}
+            source="observed"
+          />
+          <Metric
+            label="Start to end"
+            value={fmtKm(signature.netDisplacementKm)}
+            source="observed"
+          />
           <Metric
             label="Crookedness"
             value={fmtNumber(signature.sinuosity, 2)}
             unitHint="1.0 is straight"
           />
           <Metric label="Poleward" value={fmtDegrees(signature.polewardDegrees)} />
-          <Metric label="Mean speed" value={fmtWind(signature.meanTranslationKph)} source="observed" />
-          <Metric label="Fastest leg" value={fmtWind(signature.maxTranslationKph)} source="observed" />
+          <Metric
+            label="Mean speed"
+            value={fmtWind(signature.meanTranslationKph)}
+            source="observed"
+          />
+          <Metric
+            label="Fastest leg"
+            value={fmtWind(signature.maxTranslationKph)}
+            source="observed"
+          />
         </div>
       </div>
 
@@ -216,7 +244,10 @@ export function StormDnaPanel({ cycloneId }: { cycloneId: string }) {
                     <th className="label-xs py-1 pr-2 text-right">Peak</th>
                     <th className="label-xs py-1 pr-2 text-right">Life</th>
                     <th className="label-xs py-1 pr-2 text-right">Track</th>
-                    <th className="label-xs py-1 text-right" title="Standard deviations of the archive, averaged over shared traits. 0 is identical.">
+                    <th
+                      className="label-xs py-1 text-right"
+                      title="Standard deviations of the archive, averaged over shared traits. 0 is identical."
+                    >
                       Dist.
                     </th>
                   </tr>
@@ -225,14 +256,18 @@ export function StormDnaPanel({ cycloneId }: { cycloneId: string }) {
                   {/* The subject first, so a distance is read against the numbers it came from. */}
                   <tr className="border-b border-border/60 bg-accent/40">
                     <td className="py-1.5 pr-2">
-                      <span className="text-foreground">{signature.name ?? signature.externalId}</span>{" "}
+                      <span className="text-foreground">
+                        {signature.name ?? signature.externalId}
+                      </span>{" "}
                       <span className="text-muted-foreground">{signature.seasonYear}</span>
                       <span className="ml-1 text-[0.625rem] text-muted-foreground">
                         {signature.basin}
                       </span>
                     </td>
                     <td className="py-1.5 pr-2 text-right">{fmtWind(signature.peakWindKph)}</td>
-                    <td className="py-1.5 pr-2 text-right">{fmtHoursShort(signature.lifetimeHours)}</td>
+                    <td className="py-1.5 pr-2 text-right">
+                      {fmtHoursShort(signature.lifetimeHours)}
+                    </td>
                     <td className="py-1.5 pr-2 text-right">{fmtKm(signature.trackLengthKm)}</td>
                     <td className="py-1.5 text-right text-muted-foreground">this storm</td>
                   </tr>
@@ -287,16 +322,5 @@ export function StormDnaPanel({ cycloneId }: { cycloneId: string }) {
         </div>
       </div>
     </Panel>
-  );
-}
-
-/** Compact entry point for screens that only want the neighbour list. */
-export function StormDnaLink({ cycloneId }: { cycloneId: string }) {
-  return (
-    <Link to="/storm/$id" params={{ id: cycloneId }}>
-      <Button size="sm" variant="ghost">
-        Storm DNA →
-      </Button>
-    </Link>
   );
 }

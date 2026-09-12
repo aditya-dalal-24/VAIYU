@@ -9,7 +9,15 @@ export function Panel({ className, children, ...rest }: HTMLAttributes<HTMLDivEl
   );
 }
 
-export function PanelTitle({ title, sub, right }: { title: string; sub?: string; right?: ReactNode }) {
+export function PanelTitle({
+  title,
+  sub,
+  right,
+}: {
+  title: string;
+  sub?: string;
+  right?: ReactNode;
+}) {
   return (
     <div className="mb-3 flex items-start justify-between gap-3">
       <div>
@@ -37,7 +45,8 @@ export function Btn({ className, variant = "outline", size = "md", ...rest }: Bt
         "inline-flex items-center justify-center gap-2 rounded-full font-display uppercase tracking-[0.14em] transition-colors disabled:opacity-50",
         size === "sm" ? "px-3 py-1.5 text-[10px]" : "px-4 py-2.5 text-[11px]",
         variant === "solid" && "bg-primary text-primary-foreground hover:bg-primary/90",
-        variant === "outline" && "border border-border bg-transparent text-foreground hover:bg-secondary",
+        variant === "outline" &&
+          "border border-border bg-transparent text-foreground hover:bg-secondary",
         variant === "ghost" && "text-muted-foreground hover:text-foreground",
         variant === "amber" && "bg-amber text-accent-foreground hover:opacity-90",
         className,
@@ -47,7 +56,13 @@ export function Btn({ className, variant = "outline", size = "md", ...rest }: Bt
   );
 }
 
-export function Pill({ children, tone = "muted" }: { children: ReactNode; tone?: "muted" | "amber" | "danger" | "ink" }) {
+export function Pill({
+  children,
+  tone = "muted",
+}: {
+  children: ReactNode;
+  tone?: "muted" | "amber" | "danger" | "ink";
+}) {
   return (
     <span
       className={cn(
@@ -63,7 +78,15 @@ export function Pill({ children, tone = "muted" }: { children: ReactNode; tone?:
   );
 }
 
-export function Toggle({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) {
+export function Toggle({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: () => void;
+  label: string;
+}) {
   return (
     <button
       onClick={onChange}

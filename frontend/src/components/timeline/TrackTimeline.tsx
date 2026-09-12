@@ -72,15 +72,14 @@ export function TrackTimeline({
         observation,
         time,
         x: ((time - start) / span) * 100,
-        windY:
-          wind === null || maxWind <= 0 ? null : TOP + PLOT - (wind / maxWind) * PLOT,
+        windY: wind === null || maxWind <= 0 ? null : TOP + PLOT - (wind / maxWind) * PLOT,
         pressureY:
           pressure === null
             ? null
             : maxPressure === minPressure
               ? TOP + PLOT / 2
-              // Inverted, so a deepening low rises on the band.
-              : TOP + ((pressure - minPressure) / (maxPressure - minPressure)) * PLOT,
+              : // Inverted, so a deepening low rises on the band.
+                TOP + ((pressure - minPressure) / (maxPressure - minPressure)) * PLOT,
       };
     });
   }, [observations]);

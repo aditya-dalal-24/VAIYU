@@ -78,7 +78,11 @@ export function StormPicker({
         ) : !data || data.items.length === 0 ? (
           <Empty
             title="No storms match"
-            detail={query ? `Nothing found for “${query}”.` : "The archive appears to be empty. Run ingestion to load it."}
+            detail={
+              query
+                ? `Nothing found for “${query}”.`
+                : "The archive appears to be empty. Run ingestion to load it."
+            }
           />
         ) : (
           <ul>

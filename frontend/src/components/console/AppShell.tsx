@@ -35,9 +35,7 @@ function TopRail() {
       <div className="flex min-w-0 items-center gap-4">
         <Link to="/" className="flex items-center gap-2">
           <Mark />
-          <span className="font-display text-[0.8125rem] font-semibold tracking-tight">
-            VAIYU
-          </span>
+          <span className="font-display text-[0.8125rem] font-semibold tracking-tight">VAIYU</span>
           <span className="label-xs hidden sm:inline">Cyclone Intelligence</span>
         </Link>
         <nav className="flex items-center gap-0.5">
@@ -123,18 +121,10 @@ function ModelRail() {
           return (
             <span key={key} className="flex items-center gap-1.5">
               <span
-                className={cn(
-                  "h-1.5 w-1.5 rounded-full",
-                  ready ? "bg-model" : "bg-absent",
-                )}
+                className={cn("h-1.5 w-1.5 rounded-full", ready ? "bg-model" : "bg-absent")}
                 aria-hidden
               />
-              <span
-                className={cn(
-                  "label-xs",
-                  ready ? "text-foreground/70" : "text-absent",
-                )}
-              >
+              <span className={cn("label-xs", ready ? "text-foreground/70" : "text-absent")}>
                 {short[key] ?? key}
               </span>
             </span>

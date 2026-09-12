@@ -9,7 +9,14 @@
 
 import { Link } from "@tanstack/react-router";
 
-import { Button, Empty, Metric, Panel, Provenance, StatusChip } from "@/components/console/primitives";
+import {
+  Button,
+  Empty,
+  Metric,
+  Panel,
+  Provenance,
+  StatusChip,
+} from "@/components/console/primitives";
 import {
   ABSENT,
   categoryColorForWind,
@@ -103,13 +110,13 @@ export function ForecastPanel({
           {error ? (
             <div className="bg-destructive/15 px-3 py-2 text-[0.6875rem] leading-relaxed text-primary">
               <span className="font-medium">{describeError(error).title}.</span>{" "}
-              {describeError(error).detail} The forecast below is the one already stored,
-              made from {fmtDateTime(run.baseObservationAt)}.
+              {describeError(error).detail} The forecast below is the one already stored, made from{" "}
+              {fmtDateTime(run.baseObservationAt)}.
             </div>
           ) : staleBase ? (
             <div className="bg-primary/10 px-3 py-2 text-[0.6875rem] leading-relaxed text-primary">
-              Showing the forecast made from {fmtDateTime(run.baseObservationAt)}. The timeline
-              is on a different fix — run the model again to forecast from there.
+              Showing the forecast made from {fmtDateTime(run.baseObservationAt)}. The timeline is
+              on a different fix — run the model again to forecast from there.
             </div>
           ) : null}
 
@@ -162,11 +169,7 @@ function ForecastError({ error }: { error: unknown }) {
 function RunHeader({ run }: { run: PredictionRun }) {
   return (
     <div className="grid grid-cols-2 gap-3 px-3 py-2.5">
-      <Metric
-        label="Forecast base"
-        value={fmtDateTime(run.baseObservationAt)}
-        source="observed"
-      />
+      <Metric label="Forecast base" value={fmtDateTime(run.baseObservationAt)} source="observed" />
       <Metric label="Fixes used" value={String(run.observationsUsed)} source="observed" />
       <Metric label="Run at" value={fmtDateTime(run.createdAt)} />
       <Metric label="Inference" value={fmtMs(run.inferenceMs)} />
@@ -270,10 +273,7 @@ function IntensitySection({ run }: { run: PredictionRun }) {
               {intensity.points.map((point) => (
                 <tr key={point.forecastHours} className="border-t border-border/60">
                   <td className="py-1 text-model">+{point.forecastHours}h</td>
-                  <td
-                    className="py-1"
-                    style={{ color: categoryColorForWind(point.windSpeedKph) }}
-                  >
+                  <td className="py-1" style={{ color: categoryColorForWind(point.windSpeedKph) }}>
                     {fmtWind(point.windSpeedKph)}
                   </td>
                   <td className="py-1">{fmtPressure(point.pressureHpa)}</td>
@@ -310,8 +310,8 @@ function AnalogueSection({ run }: { run: PredictionRun }) {
       ) : (
         <>
           <p className="mt-1.5 text-[0.6875rem] leading-relaxed text-muted-foreground">
-            Storms whose previous 24 hours evolved like this one. Their subsequent tracks form
-            a second forecast, independent of the neural models.
+            Storms whose previous 24 hours evolved like this one. Their subsequent tracks form a
+            second forecast, independent of the neural models.
           </p>
           <ul className="mt-2 space-y-1">
             {analogues.matches.map((match) => (

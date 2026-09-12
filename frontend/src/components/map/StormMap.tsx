@@ -70,13 +70,22 @@ function unwrap(points: { latitude: number; longitude: number }[]): LatLngExpres
   return out;
 }
 
-function FitBounds({ bounds, dependency }: { bounds: LatLngBoundsExpression | null; dependency: string }) {
+function FitBounds({
+  bounds,
+  dependency,
+}: {
+  bounds: LatLngBoundsExpression | null;
+  dependency: string;
+}) {
   const map = useMap();
   useEffect(() => {
     if (!bounds) return;
     map.fitBounds(bounds, { padding: [56, 56], animate: true, maxZoom: 7 });
     // Refit only when the storm or forecast identity changes, never on every
     // render: refitting under the user's cursor makes the map feel broken.
+    // `bounds` is deliberately omitted for that reason — it is a fresh array
+    // on every render, and depending on it would refit continuously.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dependency, map]);
   return null;
 }
@@ -101,11 +110,7 @@ export function StormMap({
 
   const base = useMemo(() => {
     if (!baseTime) return visible.at(-1) ?? null;
-    return (
-      visible.find((o) => o.observedAt === baseTime) ??
-      visible.at(-1) ??
-      null
-    );
+    return visible.find((o) => o.observedAt === baseTime) ?? visible.at(-1) ?? null;
   }, [visible, baseTime]);
 
   /* The forecast line starts at the fix it was made from, so the join between
@@ -316,29 +321,18 @@ export function StormMap({
         ))}
       </MapContainer>
 
-      <MapLegend
-        hasForecast={forecast.length > 0}
-        hasAnalogue={analogue.length > 0}
-      />
+      <MapLegend hasForecast={forecast.length > 0} hasAnalogue={analogue.length > 0} />
     </div>
   );
 }
 
-function MapLegend({
-  hasForecast,
-  hasAnalogue,
-}: {
-  hasForecast: boolean;
-  hasAnalogue: boolean;
-}) {
+function MapLegend({ hasForecast, hasAnalogue }: { hasForecast: boolean; hasAnalogue: boolean }) {
   return (
     <div className="pointer-events-none absolute bottom-3 left-3 z-[400] panel px-2.5 py-2">
       <div className="label-xs mb-1.5">Layers</div>
       <div className="space-y-1">
         <LegendRow color={OBSERVED} label="Observed fixes" style="solid" />
-        {hasForecast ? (
-          <LegendRow color={MODEL} label="Model forecast" style="dashed" />
-        ) : null}
+        {hasForecast ? <LegendRow color={MODEL} label="Model forecast" style="dashed" /> : null}
         {hasAnalogue ? (
           <LegendRow color={ANALOGUE} label="Analogue ensemble" style="dotted" />
         ) : null}

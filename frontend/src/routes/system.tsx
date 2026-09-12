@@ -76,7 +76,11 @@ function System() {
             <Arrow />
             <Node label="Spring Boot" detail={API_BASE} ok />
             <Arrow />
-            <Node label="PostgreSQL" detail={`${data.data.observations.toLocaleString()} fixes`} ok={data.data.observations > 0} />
+            <Node
+              label="PostgreSQL"
+              detail={`${data.data.observations.toLocaleString()} fixes`}
+              ok={data.data.observations > 0}
+            />
             <Arrow />
             <Node label="AI service" detail={data.ai.url} ok={data.ai.reachable} />
             <Arrow />
@@ -142,14 +146,14 @@ function System() {
                 }
               />
               <p className="text-[0.6875rem] leading-relaxed text-muted-foreground">
-                Observations come from the NOAA IBTrACS best-track archive, filtered to
-                reported 00/06/12/18Z fixes with wind taken from a single agency so averaging
-                periods are not mixed. That is the same table the models were trained on, so
-                what they are asked at inference matches what they learned from.
+                Observations come from the NOAA IBTrACS best-track archive, filtered to reported
+                00/06/12/18Z fixes with wind taken from a single agency so averaging periods are not
+                mixed. That is the same table the models were trained on, so what they are asked at
+                inference matches what they learned from.
               </p>
               <p className="text-[0.6875rem] leading-relaxed text-muted-foreground">
-                There is no live feed: this is an archive, so storms are marked ARCHIVED or
-                RECENT and never "active".
+                There is no live feed: this is an archive, so storms are marked ARCHIVED or RECENT
+                and never "active".
               </p>
             </Panel>
           </div>
@@ -162,17 +166,17 @@ function System() {
           </Limitation>
           <Limitation>
             It does not estimate landfall risk or impact. Doing that credibly needs coastline
-            geometry and exposure data that are not in this system, so it is absent rather
-            than approximated.
+            geometry and exposure data that are not in this system, so it is absent rather than
+            approximated.
           </Limitation>
           <Limitation>
-            It does not use environmental fields. Sea-surface temperature, humidity and wind
-            shear are accepted by the model interface but no such data has been joined to
-            these tracks, so the models run on track history alone.
+            It does not use environmental fields. Sea-surface temperature, humidity and wind shear
+            are accepted by the model interface but no such data has been joined to these tracks, so
+            the models run on track history alone.
           </Limitation>
           <Limitation>
-            It does not analyse satellite imagery yet. The pipeline is built and the vision
-            model has an architecture, but no imagery has been obtained to train it.
+            It does not analyse satellite imagery yet. The pipeline is built and the vision model
+            has an architecture, but no imagery has been obtained to train it.
           </Limitation>
         </Panel>
       </div>

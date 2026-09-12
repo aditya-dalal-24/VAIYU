@@ -8,18 +8,10 @@
  */
 
 export type AnalysisStatus =
-  | "COMPLETED"
-  | "PARTIAL"
-  | "NOT_AVAILABLE"
-  | "FAILED"
-  | "VALIDATION_ERROR";
+  "COMPLETED" | "PARTIAL" | "NOT_AVAILABLE" | "FAILED" | "VALIDATION_ERROR";
 
 export type ModelState =
-  | "TRAINED"
-  | "UNTRAINED"
-  | "CHECKPOINT_INVALID"
-  | "LOAD_FAILED"
-  | "UNAVAILABLE";
+  "TRAINED" | "UNTRAINED" | "CHECKPOINT_INVALID" | "LOAD_FAILED" | "UNAVAILABLE";
 
 export interface PageResponse<T> {
   items: T[];

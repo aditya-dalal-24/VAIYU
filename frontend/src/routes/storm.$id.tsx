@@ -38,6 +38,15 @@ import {
   useSatelliteAnalysesForCyclone,
   useTrack,
 } from "@/lib/queries";
+import type { Observation, PredictionRun } from "@/lib/types";
+
+/*
+ * Stable empty arrays. `?? []` would hand every render a new array, which
+ * changes the identity of every dependency computed from it and quietly
+ * defeats the memos below.
+ */
+const NO_OBSERVATIONS: Observation[] = [];
+const NO_RUNS: PredictionRun[] = [];
 
 export const Route = createFileRoute("/storm/$id")({
   component: StormProfile,
@@ -53,8 +62,8 @@ function StormProfile() {
 
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
 
-  const observations = track.data ?? [];
-  const runs = history.data ?? [];
+  const observations = track.data ?? NO_OBSERVATIONS;
+  const runs = history.data ?? NO_RUNS;
   const run = useMemo(() => {
     if (selectedRunId) return runs.find((r) => r.id === selectedRunId) ?? latest.data ?? null;
     return latest.data ?? null;
@@ -102,9 +111,7 @@ function StormProfile() {
             </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-3">
               <span className="label-xs">{storm.basinName}</span>
-              <span className="num text-[0.6875rem] text-muted-foreground">
-                {storm.externalId}
-              </span>
+              <span className="num text-[0.6875rem] text-muted-foreground">{storm.externalId}</span>
               <span className="label-xs">{storm.status}</span>
             </div>
           </div>
@@ -141,12 +148,12 @@ function StormProfile() {
               <Empty title="No observations" detail="This storm has no stored track." />
             ) : (
               <LazyStormMap
-                  observations={observations}
-                  forecast={run?.trajectory.points ?? []}
-                  analogue={run?.analogues.points ?? []}
-                  baseTime={run?.baseObservationAt ?? null}
-                />
-              )}
+                observations={observations}
+                forecast={run?.trajectory.points ?? []}
+                analogue={run?.analogues.points ?? []}
+                baseTime={run?.baseObservationAt ?? null}
+              />
+            )}
           </Panel>
 
           <div className="space-y-2">
@@ -172,7 +179,10 @@ function StormProfile() {
               {quality.limitations.length > 0 ? (
                 <ul className="mt-2.5 space-y-1 border-t border-border pt-2">
                   {quality.limitations.map((limitation) => (
-                    <li key={limitation} className="text-[0.6875rem] leading-relaxed text-primary/90">
+                    <li
+                      key={limitation}
+                      className="text-[0.6875rem] leading-relaxed text-primary/90"
+                    >
                       {limitation}
                     </li>
                   ))}

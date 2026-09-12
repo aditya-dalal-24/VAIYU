@@ -14,7 +14,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
 import { StormPicker } from "@/components/console/StormPicker";
-import { Button, Empty, Metric, Panel, Provenance, Skeleton } from "@/components/console/primitives";
+import {
+  Button,
+  Empty,
+  Metric,
+  Panel,
+  Provenance,
+  Skeleton,
+} from "@/components/console/primitives";
 import { ForecastPanel } from "@/components/forecast/ForecastPanel";
 import { LazyStormMap } from "@/components/map/LazyStormMap";
 import { TrackTimeline } from "@/components/timeline/TrackTimeline";
@@ -26,8 +33,21 @@ import {
   fmtPressure,
   fmtWind,
 } from "@/lib/format";
-import { useCyclone, useCyclones, useLatestForecast, useRunForecast, useTrack } from "@/lib/queries";
+import {
+  useCyclone,
+  useCyclones,
+  useLatestForecast,
+  useRunForecast,
+  useTrack,
+} from "@/lib/queries";
 import type { CycloneSummary, Observation } from "@/lib/types";
+
+/*
+ * Stable empty arrays. `?? []` would hand every render a new array, which
+ * changes the identity of every dependency computed from it and quietly
+ * defeats the memos below.
+ */
+const NO_OBSERVATIONS: Observation[] = [];
 
 export const Route = createFileRoute("/")({
   component: MissionControl,
@@ -51,13 +71,13 @@ function MissionControl() {
   const latest = useLatestForecast(selectedStormId ?? undefined);
   const runForecast = useRunForecast(selectedStormId ?? undefined);
 
-  const observations = track.data ?? [];
+  const observations = track.data ?? NO_OBSERVATIONS;
 
   // Default the scrubber to the storm's last fix whenever the storm changes.
   useEffect(() => {
     const newest = observations[observations.length - 1];
     setSelectedTime(newest ? newest.observedAt : null);
-  }, [selectedStormId, observations.length]);
+  }, [selectedStormId, observations]);
 
   const run = runForecast.data ?? latest.data ?? null;
   const forecastBase = run?.baseObservationAt ?? null;
@@ -99,14 +119,14 @@ function MissionControl() {
             />
           ) : (
             <LazyStormMap
-                observations={observations}
-                forecast={run?.trajectory.points ?? []}
-                analogue={run?.analogues.points ?? []}
-                baseTime={forecastBase ?? selectedTime}
-                selectedTime={selectedTime}
-                onSelect={onSelectFix}
-                hideFuture={replay}
-              />
+              observations={observations}
+              forecast={run?.trajectory.points ?? []}
+              analogue={run?.analogues.points ?? []}
+              baseTime={forecastBase ?? selectedTime}
+              selectedTime={selectedTime}
+              onSelect={onSelectFix}
+              hideFuture={replay}
+            />
           )}
 
           {/* Storm identity, docked top-left over the map. */}
@@ -160,11 +180,7 @@ function MissionControl() {
             <Panel title="Selected fix" className="min-w-0 flex-1" bodyClassName="p-3">
               {selected ? (
                 <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
-                  <Metric
-                    label="Time"
-                    value={fmtDateTime(selected.observedAt)}
-                    source="observed"
-                  />
+                  <Metric label="Time" value={fmtDateTime(selected.observedAt)} source="observed" />
                   <Metric
                     label="Position"
                     value={fmtCoords(selected.latitude, selected.longitude)}
@@ -213,7 +229,10 @@ function MissionControl() {
                 {detail.data.dataQuality.limitations.length > 0 ? (
                   <ul className="mt-2 space-y-1 border-t border-border pt-2">
                     {detail.data.dataQuality.limitations.map((limitation) => (
-                      <li key={limitation} className="text-[0.6875rem] leading-relaxed text-primary/90">
+                      <li
+                        key={limitation}
+                        className="text-[0.6875rem] leading-relaxed text-primary/90"
+                      >
                         {limitation}
                       </li>
                     ))}
@@ -241,9 +260,7 @@ function MissionControl() {
           isRunning={runForecast.isPending}
           error={runForecast.error}
           forecastReady={forecastReady}
-          onRun={(force) =>
-            runForecast.mutate({ baseTime: selectedTime ?? undefined, force })
-          }
+          onRun={(force) => runForecast.mutate({ baseTime: selectedTime ?? undefined, force })}
           className="h-full"
         />
       </aside>

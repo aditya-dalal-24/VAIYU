@@ -23,12 +23,7 @@ export const VERIFY_TOLERANCE_HOURS = 1.5;
 
 const EARTH_RADIUS_KM = 6371;
 
-export function greatCircleKm(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number,
-): number {
+export function greatCircleKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const toRad = (value: number) => (value * Math.PI) / 180;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
@@ -53,10 +48,7 @@ export interface VerificationRow {
   analogueErrorKm: number | null;
 }
 
-function nearestFix(
-  observations: Observation[],
-  targetIso: string,
-): Observation | null {
+function nearestFix(observations: Observation[], targetIso: string): Observation | null {
   const target = new Date(targetIso).getTime();
   let best: Observation | null = null;
   let bestGap = VERIFY_TOLERANCE_HOURS * 3_600_000;
@@ -102,12 +94,7 @@ export function verifyForecast(
     let windErrorKph: number | null = null;
 
     if (actual) {
-      errorKm = greatCircleKm(
-        actual.latitude,
-        actual.longitude,
-        point.latitude,
-        point.longitude,
-      );
+      errorKm = greatCircleKm(actual.latitude, actual.longitude, point.latitude, point.longitude);
 
       if (base) {
         persistenceKm = greatCircleKm(
@@ -125,12 +112,7 @@ export function verifyForecast(
             const scale = point.forecastHours / hoursPerLeg;
             const projectedLat = base.latitude + (base.latitude - prior.latitude) * scale;
             const projectedLon = base.longitude + (base.longitude - prior.longitude) * scale;
-            linearKm = greatCircleKm(
-              actual.latitude,
-              actual.longitude,
-              projectedLat,
-              projectedLon,
-            );
+            linearKm = greatCircleKm(actual.latitude, actual.longitude, projectedLat, projectedLon);
           }
         }
       }

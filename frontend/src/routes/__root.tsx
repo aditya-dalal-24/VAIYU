@@ -23,8 +23,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "Tropical cyclone tracking, trained-model track and intensity forecasting, and "
-          + "historical analogue analysis over the IBTrACS best-track archive.",
+          "Tropical cyclone tracking, trained-model track and intensity forecasting, and " +
+          "historical analogue analysis over the IBTrACS best-track archive.",
       },
     ],
     links: [
@@ -35,8 +35,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "stylesheet",
         href:
-          "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700"
-          + "&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap",
+          "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700" +
+          "&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap",
       },
     ],
   }),
@@ -75,9 +75,7 @@ function NotFound() {
   return (
     <div className="graticule flex h-full flex-col items-center justify-center gap-3">
       <p className="font-display text-2xl">No such screen</p>
-      <p className="text-xs text-muted-foreground">
-        That route does not exist in this console.
-      </p>
+      <p className="text-xs text-muted-foreground">That route does not exist in this console.</p>
       <Link to="/" className="mt-2">
         <Button variant="primary">Back to Mission Control</Button>
       </Link>
@@ -90,9 +88,7 @@ function ErrorView({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="graticule flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
       <p className="font-display text-xl">This screen failed to load</p>
-      <p className="max-w-lg text-xs leading-relaxed text-muted-foreground">
-        {error.message}
-      </p>
+      <p className="max-w-lg text-xs leading-relaxed text-muted-foreground">{error.message}</p>
       <div className="mt-2 flex gap-2">
         <Button
           variant="primary"

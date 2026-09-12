@@ -56,7 +56,9 @@ export function Provenance({
     >
       <span className={cn("h-1.5 w-1.5 rounded-full", style.dot)} aria-hidden />
       <span className={style.text}>{style.label}</span>
-      {detail ? <span className="text-muted-foreground normal-case tracking-normal">{detail}</span> : null}
+      {detail ? (
+        <span className="text-muted-foreground normal-case tracking-normal">{detail}</span>
+      ) : null}
     </span>
   );
 }
@@ -134,10 +136,7 @@ export function Metric({
         ) : null}
       </div>
       <div
-        className={cn(
-          "num mt-0.5 truncate text-lg leading-tight",
-          missing && "text-absent",
-        )}
+        className={cn("num mt-0.5 truncate text-lg leading-tight", missing && "text-absent")}
         style={!missing && accent ? { color: accent } : undefined}
         title={unitHint}
       >

@@ -124,9 +124,7 @@ function Explorer() {
 
         <div className="ml-auto text-right">
           <span className="label-xs">Matches</span>
-          <div className="num text-sm">
-            {data ? data.totalItems.toLocaleString() : "—"}
-          </div>
+          <div className="num text-sm">{data ? data.totalItems.toLocaleString() : "—"}</div>
         </div>
       </Panel>
 
@@ -201,10 +199,7 @@ function Explorer() {
                     {storm.observationCount}
                   </td>
                   <td className="px-3 py-1.5">
-                    <CategoryChip
-                      category={storm.peakCategory}
-                      rank={storm.peakCategoryRank}
-                    />
+                    <CategoryChip category={storm.peakCategory} rank={storm.peakCategoryRank} />
                   </td>
                   <td className="px-3 py-1.5 text-right">
                     <Link to="/lab/$id" params={{ id: storm.id }}>

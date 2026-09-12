@@ -28,17 +28,18 @@ import {
 import { ForecastPanel } from "@/components/forecast/ForecastPanel";
 import { LazyStormMap } from "@/components/map/LazyStormMap";
 import { TrackTimeline } from "@/components/timeline/TrackTimeline";
-import {
-  ABSENT,
-  fmtCoords,
-  fmtDateTime,
-  fmtKm,
-  fmtPressure,
-  fmtWind,
-} from "@/lib/format";
+import { ABSENT, fmtCoords, fmtDateTime, fmtKm, fmtPressure, fmtWind } from "@/lib/format";
 import { useCyclone, useLatestForecast, useRunForecast, useTrack } from "@/lib/queries";
+import type { Observation } from "@/lib/types";
 import { meanOf, verifyForecast } from "@/lib/verify";
 import { cn } from "@/lib/utils";
+
+/*
+ * Stable empty arrays. `?? []` would hand every render a new array, which
+ * changes the identity of every dependency computed from it and quietly
+ * defeats the memos below.
+ */
+const NO_OBSERVATIONS: Observation[] = [];
 
 export const Route = createFileRoute("/lab/$id")({
   component: PredictionLab,
@@ -51,7 +52,7 @@ function PredictionLab() {
   const latest = useLatestForecast(id);
   const runForecast = useRunForecast(id);
 
-  const observations = track.data ?? [];
+  const observations = track.data ?? NO_OBSERVATIONS;
   const [baseTime, setBaseTime] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
 
@@ -73,9 +74,7 @@ function PredictionLab() {
   const inputs = useMemo(() => {
     if (!baseTime) return [];
     const baseMs = new Date(baseTime).getTime();
-    return observations
-      .filter((o) => new Date(o.observedAt).getTime() <= baseMs)
-      .slice(-12);
+    return observations.filter((o) => new Date(o.observedAt).getTime() <= baseMs).slice(-12);
   }, [observations, baseTime]);
 
   const verification = useMemo(() => {
@@ -170,17 +169,17 @@ function PredictionLab() {
                 <Empty title="No track" />
               ) : (
                 <LazyStormMap
-                    observations={observations}
-                    forecast={runMatchesBase ? (run?.trajectory.points ?? []) : []}
-                    analogue={runMatchesBase ? (run?.analogues.points ?? []) : []}
-                    baseTime={baseTime}
-                    selectedTime={baseTime}
-                    onSelect={(observation) => {
-                      setBaseTime(observation.observedAt);
-                      setRevealed(false);
-                    }}
-                    hideFuture={!revealed}
-                  />
+                  observations={observations}
+                  forecast={runMatchesBase ? (run?.trajectory.points ?? []) : []}
+                  analogue={runMatchesBase ? (run?.analogues.points ?? []) : []}
+                  baseTime={baseTime}
+                  selectedTime={baseTime}
+                  onSelect={(observation) => {
+                    setBaseTime(observation.observedAt);
+                    setRevealed(false);
+                  }}
+                  hideFuture={!revealed}
+                />
               )}
             </Panel>
 
@@ -200,9 +199,7 @@ function PredictionLab() {
               title="Verification"
               provenance={
                 verifiable.length > 0 ? (
-                  <span className="label-xs">
-                    great-circle error against reported fixes
-                  </span>
+                  <span className="label-xs">great-circle error against reported fixes</span>
                 ) : null
               }
               bodyClassName="p-3"
@@ -226,11 +223,7 @@ function PredictionLab() {
                       source="model"
                       unitHint="Mean great-circle distance from the reported fix"
                     />
-                    <Metric
-                      label="Analogue error"
-                      value={fmtKm(meanAnalogue)}
-                      source="analogue"
-                    />
+                    <Metric label="Analogue error" value={fmtKm(meanAnalogue)} source="analogue" />
                     <Metric
                       label="Linear baseline"
                       value={fmtKm(meanLinear)}
@@ -295,8 +288,8 @@ function PredictionLab() {
 
                   {verifiable.length < verification.length ? (
                     <p className="mt-2 text-[0.6875rem] text-muted-foreground">
-                      {verification.length - verifiable.length} horizon(s) cannot be verified:
-                      the storm has no reported fix within 90 minutes of that forecast time.
+                      {verification.length - verifiable.length} horizon(s) cannot be verified: the
+                      storm has no reported fix within 90 minutes of that forecast time.
                     </p>
                   ) : null}
                 </>
@@ -376,8 +369,8 @@ function PredictionLab() {
                 </table>
               )}
               <p className="border-t border-border px-2 py-1.5 text-[0.625rem] leading-relaxed text-muted-foreground">
-                The last row is the base fix. The backend sends these fixes and excludes
-                everything after, so the forecast cannot see the outcome.
+                The last row is the base fix. The backend sends these fixes and excludes everything
+                after, so the forecast cannot see the outcome.
               </p>
             </Panel>
           </div>

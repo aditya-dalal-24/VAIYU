@@ -31,12 +31,12 @@ codebase whose whole subject is gappy observational data.
 **Provenance has a colour, and it is never decorative.** Four hues are defined
 in `src/styles.css` and used for nothing else:
 
-| | |
-| --- | --- |
-| `--observed` (blue) | a fix that was actually recorded |
-| `--model` (amber) | output of a trained model |
-| `--analogue` (violet) | an aggregate of similar past storms |
-| `--absent` (grey) | no data — never filled in with a plausible value |
+|                       |                                                  |
+| --------------------- | ------------------------------------------------ |
+| `--observed` (blue)   | a fix that was actually recorded                 |
+| `--model` (amber)     | output of a trained model                        |
+| `--analogue` (violet) | an aggregate of similar past storms              |
+| `--absent` (grey)     | no data — never filled in with a plausible value |
 
 A reader who learns three colours can tell measurement from prediction at a
 glance, which is the distinction the whole product turns on.
