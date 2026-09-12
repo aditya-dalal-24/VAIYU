@@ -183,7 +183,8 @@ function TrackSection({ run }: { run: PredictionRun }) {
         status={trajectory.status}
         model={`${trajectory.model.name ?? ABSENT} ${trajectory.model.version ?? ""}`.trim()}
         confidence={trajectory.confidence}
-        confidenceHint="Skill against a persistence baseline on held-out storms at the longest horizon"
+        confidenceLabel="Skill"
+        confidenceHint="Skill against a persistence baseline on held-out storms at the longest horizon. A property of the model, not of this forecast."
         source="model"
       />
       {trajectory.status !== "COMPLETED" ? (
@@ -242,7 +243,8 @@ function IntensitySection({ run }: { run: PredictionRun }) {
         status={intensity.status}
         model={`${intensity.model.name ?? ABSENT} ${intensity.model.version ?? ""}`.trim()}
         confidence={intensity.confidence}
-        confidenceHint="Model's own confidence in the trend class"
+        confidenceLabel="Trend conf."
+        confidenceHint="The model's probability for the trend class it chose here. This one is about this forecast, not the model's measured accuracy."
         source="model"
       />
       {intensity.status !== "COMPLETED" ? (
@@ -297,7 +299,8 @@ function AnalogueSection({ run }: { run: PredictionRun }) {
         status={analogues.status}
         model={analogues.model.name ?? ABSENT}
         confidence={analogues.confidence}
-        confidenceHint="Ensemble skill against persistence on held-out storms"
+        confidenceLabel="Skill"
+        confidenceHint="Ensemble skill against persistence on held-out storms. A property of the model, not of this forecast."
         source="analogue"
       />
       {analogues.status !== "COMPLETED" ? (
@@ -402,11 +405,23 @@ function InputSection({ run }: { run: PredictionRun }) {
   );
 }
 
+/**
+ * A section's title, provenance and its one headline number.
+ *
+ * The number is deliberately not called the same thing everywhere. For the
+ * track and analogue sections it is the model's measured skill on held-out
+ * storms — a property of the model, identical for every storm it forecasts.
+ * For the intensity trend it is the model's probability for the class it
+ * chose, which is a property of this one forecast. Labelling both "skill"
+ * invited reading a class probability as evaluated accuracy, so the caller
+ * names the quantity it is passing.
+ */
 function SectionHead({
   title,
   status,
   model,
   confidence,
+  confidenceLabel,
   confidenceHint,
   source,
 }: {
@@ -414,6 +429,7 @@ function SectionHead({
   status: string | null;
   model: string;
   confidence: number | null;
+  confidenceLabel: string;
   confidenceHint: string;
   source: "model" | "analogue";
 }) {
@@ -427,7 +443,7 @@ function SectionHead({
         <Provenance source={source} detail={model} className="mt-1" />
       </div>
       <div className="text-right">
-        <div className="label-xs">Skill</div>
+        <div className="label-xs">{confidenceLabel}</div>
         <div
           className={cn("num text-sm", confidence === null ? "text-absent" : "text-foreground")}
           title={confidence === null ? "No evaluation was recorded for this model" : confidenceHint}
