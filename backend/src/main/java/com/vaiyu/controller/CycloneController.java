@@ -4,7 +4,9 @@ import com.vaiyu.dto.CycloneDetailDto;
 import com.vaiyu.dto.CycloneSummaryDto;
 import com.vaiyu.dto.ObservationDto;
 import com.vaiyu.dto.PageResponse;
+import com.vaiyu.dto.StormDnaDto;
 import com.vaiyu.service.CycloneQueryService;
+import com.vaiyu.service.StormDnaService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,9 +23,11 @@ import java.util.UUID;
 public class CycloneController {
 
     private final CycloneQueryService cyclones;
+    private final StormDnaService dna;
 
-    public CycloneController(CycloneQueryService cyclones) {
+    public CycloneController(CycloneQueryService cyclones, StormDnaService dna) {
         this.cyclones = cyclones;
+        this.dna = dna;
     }
 
     /**
@@ -68,5 +72,23 @@ public class CycloneController {
     @GetMapping("/{id}/observations")
     public ResponseEntity<List<ObservationDto>> observations(@PathVariable UUID id) {
         return ResponseEntity.ok(cyclones.track(id));
+    }
+
+    /**
+     * Storm DNA: this storm's life measured from its fixes, and the archive
+     * storms whose signatures are closest to it.
+     *
+     * <p>Nothing here is predicted. It is a description of what the storm did,
+     * and a comparison with what other storms did, computed from stored
+     * observations alone — which is why it works for every storm in the
+     * archive, including the ones no model has been run on.
+     *
+     * @param limit how many neighbours to return, 1 to 20
+     */
+    @GetMapping("/{id}/dna")
+    public StormDnaDto dna(
+            @PathVariable UUID id,
+            @RequestParam(required = false) Integer limit) {
+        return dna.dnaOf(id, limit == null ? StormDnaService.defaultNeighbours() : limit);
     }
 }

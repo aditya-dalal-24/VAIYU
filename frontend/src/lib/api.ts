@@ -13,6 +13,7 @@ import type {
   PageResponse,
   PredictionRun,
   SatelliteAnalysis,
+  StormDna,
   SystemStatus,
 } from "./types";
 
@@ -142,6 +143,14 @@ export const api = {
   cyclone: (id: string) => request<CycloneDetail>(`/api/v1/cyclones/${id}`),
 
   track: (id: string) => request<Observation[]>(`/api/v1/cyclones/${id}/track`),
+
+  /**
+   * Storm DNA: the storm's life measured from its fixes, plus the archive
+   * storms with the closest signatures. No model is involved, so this works
+   * for every storm, including ones never forecast.
+   */
+  stormDna: (id: string, limit = 6) =>
+    request<StormDna>(`/api/v1/cyclones/${id}/dna${query({ limit })}`),
 
   /** Runs the models. `force` re-runs even when a stored run exists. */
   forecast: (

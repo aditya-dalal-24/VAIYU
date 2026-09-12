@@ -221,6 +221,67 @@ export interface SystemStatus {
   };
 }
 
+/**
+ * A storm's life measured from its fixes.
+ *
+ * Every numeric field is nullable because a storm's data may not support it: a
+ * track with no pressure reading has no minimum pressure, a single-fix track no
+ * speed. Null means "not knowable from the fixes", never zero.
+ */
+export interface StormSignature {
+  cycloneId: string;
+  name: string | null;
+  externalId: string;
+  basin: string;
+  seasonYear: number | null;
+
+  lifetimeHours: number | null;
+  fixCount: number;
+  genesisLatitude: number | null;
+  genesisLongitude: number | null;
+  peakWindKph: number | null;
+  minPressureHpa: number | null;
+  peakLatitude: number | null;
+  timeToPeakFraction: number | null;
+  hoursAtHurricaneForce: number | null;
+
+  trackLengthKm: number | null;
+  netDisplacementKm: number | null;
+  sinuosity: number | null;
+  meanTranslationKph: number | null;
+  maxTranslationKph: number | null;
+  polewardDegrees: number | null;
+
+  maxIntensification24hKph: number | null;
+  maxWeakening24hKph: number | null;
+  rapidIntensification: boolean;
+
+  traits: string[];
+  limitations: string[];
+}
+
+export interface StormNeighbour {
+  cycloneId: string;
+  name: string | null;
+  externalId: string;
+  basin: string;
+  seasonYear: number | null;
+  /** Standard deviations of the archive, averaged over shared traits. */
+  distance: number;
+  traitsCompared: number;
+  peakWindKph: number | null;
+  lifetimeHours: number | null;
+  trackLengthKm: number | null;
+  sharedTraits: string[];
+}
+
+export interface StormDna {
+  signature: StormSignature;
+  neighbours: StormNeighbour[];
+  method: string;
+  comparedWith: number;
+}
+
 export interface ApiErrorBody {
   timestamp: string;
   status: number;

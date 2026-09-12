@@ -86,6 +86,16 @@ storms is inspectable in a way a network's output is not, and because the
 spread across its members is an honest, if weak, uncertainty signal
 (spread/error correlation ≈ 0.30).
 
+**Storm DNA** — the one analysis here with no model in it. A storm's whole
+life is reduced to nine measured traits — how long it lasted, how strong and
+how quickly it got there, how far, how fast and how crookedly it travelled,
+where it formed and how far poleward it went — and compared with every other
+storm in the archive by standardised Euclidean distance. It is not the analogue
+ensemble: that matches the last 24 hours to forecast the next 24, while this
+compares completed lives and forecasts nothing. Nearest neighbours are reported
+with the distance and the number of traits it was computed from, because a
+distance over four traits is not the same claim as one over nine.
+
 **Satellite** — architecture, training pipeline and source-conditioning are
 complete, but no checkpoint for the current architecture exists on this machine,
 so every satellite request returns `NOT_AVAILABLE` with a reason. An earlier
@@ -174,7 +184,7 @@ Set `VITE_API_BASE_URL` in `frontend/.env.local` if the backend is not on
 | --- | --- |
 | **Mission Control** | One storm in full: track, scrubbable lifecycle, selected fix, data quality, and the panel that runs the models. |
 | **Explorer** | The whole archive — search, basin and season filters, sorting by intensity or recency. |
-| **Storm profile** | Every fix as numbers, plus the history of model runs made against that storm. |
+| **Storm profile** | Every fix as numbers, the storm's DNA, and the history of model runs made against that storm. |
 | **Prediction Lab** | Rewind a storm to an earlier fix, run the models on what was knowable then, reveal what happened, and score the forecast against persistence, linear extrapolation and the analogue ensemble. |
 | **Satellite** | Frame analysis. Currently an explained unavailable state. |
 | **System** | Live pipeline state: which models are loaded, how much data is stored, what is missing and why. |

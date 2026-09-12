@@ -70,6 +70,25 @@ Status codes carry meaning and the console depends on them: 422 the storm's
 data cannot support a forecast, 503 the AI service or model is unavailable, 204
 no run has been made for this storm yet, 404 no such storm.
 
+## Storm DNA
+
+Implemented. `GET /api/v1/cyclones/{id}/dna`.
+
+```text
+Stored observations
+        ↓ StormSignature: nine traits measured per storm
+Archive index (built once per ingest, held in memory)
+        ↓ standardised Euclidean distance over shared traits
+Nearest neighbours
+        ↓
+Frontend
+```
+
+No model and no AI service is involved, which is why it works for every storm
+in the archive including those never forecast. The index is rebuilt when the
+stored fix count changes, so a newly ingested season is never silently missing
+from the comparison.
+
 ## Not implemented
 
 - Satellite inference has an architecture, a training pipeline and source

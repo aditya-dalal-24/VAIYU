@@ -21,6 +21,7 @@ import {
   Skeleton,
   StatusChip,
 } from "@/components/console/primitives";
+import { StormDnaPanel } from "@/components/dna/StormDnaPanel";
 import { LazyStormMap } from "@/components/map/LazyStormMap";
 import {
   categoryColorForWind,
@@ -230,6 +231,8 @@ function StormProfile() {
             </Panel>
           </div>
         </div>
+
+        <StormDnaPanel cycloneId={id} />
 
         <Panel
           title="Lifecycle"

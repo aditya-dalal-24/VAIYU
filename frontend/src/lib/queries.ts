@@ -20,6 +20,7 @@ export const keys = {
   cyclones: (params: unknown) => ["cyclones", params] as const,
   cyclone: (id: string) => ["cyclone", id] as const,
   track: (id: string) => ["track", id] as const,
+  stormDna: (id: string, limit: number) => ["storm-dna", id, limit] as const,
   latestForecast: (id: string) => ["forecast-latest", id] as const,
   forecastHistory: (id: string) => ["forecast-history", id] as const,
   run: (id: string) => ["forecast-run", id] as const,
@@ -74,6 +75,19 @@ export function useTrack(id: string | undefined) {
   return useQuery({
     queryKey: keys.track(id ?? "none"),
     queryFn: () => api.track(id as string),
+    enabled: Boolean(id),
+    staleTime: ARCHIVE_STALE,
+  });
+}
+
+/**
+ * A storm's measured signature and its nearest archive neighbours. Derived from
+ * stored fixes, so it is as stable as the archive and cached hard.
+ */
+export function useStormDna(id: string | undefined, limit = 6) {
+  return useQuery({
+    queryKey: keys.stormDna(id ?? "none", limit),
+    queryFn: () => api.stormDna(id as string, limit),
     enabled: Boolean(id),
     staleTime: ARCHIVE_STALE,
   });
