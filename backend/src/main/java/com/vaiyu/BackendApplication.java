@@ -10,6 +10,18 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
 
+/**
+ * Entry point.
+ *
+ * <p>Spring Boot does not read {@code .env} files, so local configuration --
+ * the database password above all -- would otherwise have to be exported into
+ * the shell before every run, and set a second time in the IDE's run
+ * configuration. {@link #loadDotEnv()} reads the file into system properties
+ * before the context starts, which makes {@code backend/.env} work the same
+ * way from Maven, from a jar and from an IDE. Real environment variables and
+ * system properties already set are never overwritten, so a deployment that
+ * sets them properly is unaffected.
+ */
 @SpringBootApplication
 @ConfigurationPropertiesScan
 @EnableScheduling

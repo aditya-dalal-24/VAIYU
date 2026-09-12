@@ -1,62 +1,78 @@
 # VAIYU Development Guide
 
 ## Environment Configuration
-To run the backend locally, you must configure your environment variables. 
-**IMPORTANT**: Spring Boot does **NOT** automatically load `.env` files. `.env.example` is purely a documentation/template file.
 
-### A. The `.env.example` Template
-1. Copy `backend/.env.example` to a new file named `backend/.env` (which is git-ignored).
-2. Provide the required Neon PostgreSQL credentials inside your new `.env` file:
-   - `DB_URL`: The JDBC URL for the Neon database (e.g., `jdbc:postgresql://<host>.neon.tech/vaiyu?sslmode=require`)
-   - `DB_USERNAME`: Your Neon username
-   - `DB_PASSWORD`: Your Neon password
+Copy `backend/.env.example` to `backend/.env` (which is git-ignored) and fill in
+your local values:
 
-*Note: Never commit your `.env` file to version control.*
+- `SERVER_PORT` — the backend's port. `8081` is the documented default, because
+  8080 is so often already taken by something else.
+- `DB_URL` — e.g. `jdbc:postgresql://localhost:5432/vaiyu`
+- `DB_USERNAME`, `DB_PASSWORD` — your local PostgreSQL credentials
+- `AI_SERVICE_URL` — e.g. `http://localhost:8000`
+- `PUBLIC_BASE_URL` — where the backend is reachable **from the AI service**,
+  because uploaded satellite frames are fetched by URL rather than passed
+  inline.
 
-### B. Command Line Execution
-When running from the command line, you must explicitly load these variables into your session before starting Spring Boot.
+Spring Boot does not read `.env` files on its own, so `BackendApplication.main`
+loads one before the context starts, from `./.env`, `backend/.env` or
+`../backend/.env`, whichever it finds first. That means the file works the same
+way from Maven, from a jar and from an IDE's run button — there is no export
+step and nothing to duplicate into a Run/Debug configuration.
 
-**On Windows (PowerShell):**
-```powershell
-Get-Content .env | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
-    $parts = $_.Split('=', 2)
-    [Environment]::SetEnvironmentVariable($parts[0].Trim(), $parts[1].Trim())
-}
+A value already present as a real environment variable or system property is
+never overwritten, so a deployment that sets configuration properly is
+unaffected by the file.
+
+`application.yml` also carries defaults for everything except the password, so
+the backend will start against a local `vaiyu` database without a `.env` at all.
+It will not authenticate unless your PostgreSQL accepts the placeholder, which
+is the point: the credential is the one thing that must be supplied.
+
+*Never commit your `.env`.*
+
+## Database Migrations (Flyway)
+
+Flyway is the schema authority.
+
+- `ddl-auto` is `validate`: Hibernate will not create or alter tables, only
+  check that the entity mappings match what the migrations produced. With
+  `update` the two fought each other and silently created tables no migration
+  knew about.
+- All schema changes are SQL scripts in
+  `backend/src/main/resources/db/migration/`.
+- Naming: `V<version>__<description>.sql`, e.g. `V1__init.sql`.
+- Migrations run automatically at startup.
+
+## Running the Backend
+
+```bash
+cd backend
 mvn spring-boot:run
 ```
 
-**On Linux/Mac:**
+Use `mvn clean spring-boot:run` if configuration changes seem to have no
+effect: a stale `target/classes/application.properties` from an earlier build
+once overrode the YAML entirely, forcing the wrong database and port.
+
+## Health
+
+```text
+GET http://localhost:8081/actuator/health   → {"status":"UP"}
+GET http://localhost:8081/api/v1/system/status
+```
+
+The second is the more useful one while developing: it reports which models the
+AI service has loaded, how many storms and fixes are stored, and the reason for
+anything that is unavailable.
+
+## Loading the Archive
+
 ```bash
-export $(grep -v '^#' .env | xargs) && mvn spring-boot:run
+curl -X POST http://localhost:8081/api/internal/ingest/ibtracs
 ```
 
-### C. IDE Configuration (IntelliJ / VS Code)
-If you run the application via your IDE (e.g., clicking the "Play" button on `BackendApplication.java`), the `.env` file will **NOT** be read. 
-You must manually add the environment variables to your IDE's Run/Debug Configuration:
-- **IntelliJ**: Edit Configuration -> Environment Variables -> Paste the variables.
-- **VS Code**: Add an `env` block to your `launch.json`.
-
-## Database Migrations (Flyway)
-We use Flyway as the database schema migration authority. 
-- `ddl-auto` is set to `validate`. Hibernate will NOT auto-create or update tables.
-- All schema changes must be written as SQL scripts in `backend/src/main/resources/db/migration/`.
-- Naming convention: `V<version>__<description>.sql` (e.g., `V1__init.sql`).
-- Migrations run automatically when the Spring Boot application starts.
-
-## Running the Backend
-Ensure your `.env` is configured, then run:
-```bash
-cd backend
-mvn clean spring-boot:run
-```
-
-## Testing the Health Endpoint
-We use Spring Boot Actuator to monitor application health.
-Once the backend is running, verify the health by accessing:
-```
-GET http://localhost:8080/actuator/health
-```
-Expected response:
-```json
-{"status":"UP"}
-```
+Reads `ai-service/data/processed/observations.csv`, which the AI service's
+training pipeline produces, so inference input matches training data by
+construction. Upserts key on `(external_source, external_id)`, so re-running
+after a retrain is safe.

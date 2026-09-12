@@ -1,5 +1,7 @@
 server:
-  port: ${SERVER_PORT:8080}
+  # 8081 rather than 8080, which is too often already taken; the frontend's
+  # own default base URL matches this.
+  port: ${SERVER_PORT:8081}
   error:
     # A stack trace in an API response leaks internals and helps no caller.
     include-stacktrace: never
@@ -62,7 +64,7 @@ ai:
 vaiyu:
   # Where uploaded satellite frames are served from. The AI service fetches
   # imagery by URL, so this must be reachable from it.
-  public-base-url: ${PUBLIC_BASE_URL:http://localhost:8080}
+  public-base-url: ${PUBLIC_BASE_URL:http://localhost:8081}
   satellite:
     storage-dir: ${SATELLITE_STORAGE_DIR:./data/satellite-uploads}
   ingest:

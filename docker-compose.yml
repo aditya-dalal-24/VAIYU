@@ -1,3 +1,7 @@
+# NOTE: this file is aspirational, not working. None of ./backend, ./ai-service
+# or ./frontend contains a Dockerfile, so `docker compose up` fails at the
+# build step. It is kept as the intended shape of a container deployment; the
+# supported way to run VAIYU today is the local setup in the root README.
 version: '3.8'
 
 services:
@@ -21,8 +25,11 @@ services:
     build: ./backend
     container_name: vaiyu-backend
     ports:
-      - "8080:8080"
+      - "8081:8081"
     environment:
+      SERVER_PORT: 8081
+      # Where the AI service can fetch uploaded satellite frames from.
+      PUBLIC_BASE_URL: http://backend:8081
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/vaiyu
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: changeme
