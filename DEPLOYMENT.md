@@ -65,17 +65,17 @@ sudo ufw enable
 On the server:
 
 ```bash
-git clone https://github.com/aditya-dalal-24/vaiyu.git
-cd vaiyu
+git clone https://github.com/aditya-dalal-24/VAIYU.git
+cd VAIYU
 ```
 
 The trained models and the storm archive are not in git. Download
 `vaiyu-models-and-data.zip` from the repository's Releases page and unzip it in
-`~/vaiyu`:
+`~/VAIYU`:
 
 ```bash
 sudo apt-get install -y unzip
-curl -L -o models.zip https://github.com/aditya-dalal-24/vaiyu/releases/latest/download/vaiyu-models-and-data.zip
+curl -L -o models.zip https://github.com/aditya-dalal-24/VAIYU/releases/latest/download/vaiyu-models-and-data.zip
 unzip models.zip
 ```
 
@@ -84,7 +84,7 @@ That fills in `ai-service/checkpoints/` and
 
 ## 4. Set the secrets
 
-On the server, in `~/vaiyu`:
+On the server, in `~/VAIYU`:
 
 ```bash
 cp deploy/.env.example .env
@@ -140,7 +140,7 @@ Expect roughly 30 seconds and a reply with `"storms":4450`,
 
 ## Day-to-day
 
-| Task | Command (in `~/vaiyu`) |
+| Task | Command (in `~/VAIYU`) |
 | --- | --- |
 | See logs | `docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f backend` |
 | Restart | `docker compose -f docker-compose.yml -f docker-compose.prod.yml restart` |
@@ -160,5 +160,5 @@ live only there; the archive itself can always be re-ingested.
 | Storm list is empty | Step 6 has not been run, or returned an error. |
 | Ingest returns 401 | The token in the header does not match `.env`. |
 | Ingest returns 403 | `VAIYU_ADMIN_TOKEN` is unset or shorter than 24 characters. |
-| System shows 0 models | The release zip was not unzipped in `~/vaiyu` (step 3). |
+| System shows 0 models | The release zip was not unzipped in `~/VAIYU` (step 3). |
 | Containers restarting repeatedly | The server is out of memory; check with `free -h`. |

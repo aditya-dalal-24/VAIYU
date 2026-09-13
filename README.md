@@ -128,8 +128,8 @@ Java 17 · Maven 3.9 · Node.js 20+ · Python 3.11+ · PostgreSQL 14+
 ### 1. Clone and create the database
 
 ```bash
-git clone https://github.com/aditya-dalal-24/vaiyu.git
-cd vaiyu
+git clone https://github.com/aditya-dalal-24/VAIYU.git
+cd VAIYU
 psql -U postgres -c "CREATE DATABASE vaiyu;"
 ```
 
@@ -140,7 +140,7 @@ The schema is created automatically by Flyway the first time the backend starts.
 These are not stored in git. Choose one:
 
 **Download them** (fast) — from this repository's
-[Releases](https://github.com/aditya-dalal-24/vaiyu/releases), download `vaiyu-models-and-data.zip` and unzip it at
+[Releases](https://github.com/aditya-dalal-24/VAIYU/releases), download `vaiyu-models-and-data.zip` and unzip it at
 the repository root. It fills in `ai-service/checkpoints/` and
 `ai-service/data/processed/observations.csv`.
 
