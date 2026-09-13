@@ -1,36 +1,57 @@
-# VAIYU — Tropical Cyclone Intelligence
+<div align="center">
 
-**A mission-control console for tropical cyclones.** VAIYU forecasts a storm's
-track and intensity with trained neural networks, finds the storms in 46 years
-of history that behaved most like it, and lets you check every forecast against
-what actually happened — with the source of every number on screen made
-explicit.
+# 🌀 VAIYU
+
+### Tropical cyclone intelligence — forecasts you can check
+
+Neural-network track and intensity forecasts, 46 years of storm history,<br>
+and a lab that scores every prediction against what actually happened.
+
+<br>
+
+![Java](https://img.shields.io/badge/Java_17-ED8B00?style=flat-square&logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot_3.2-6DB33F?style=flat-square&logo=springboot&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white)
+![Python](https://img.shields.io/badge/Python_3.11-3776AB?style=flat-square&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=flat-square&logo=pytorch&logoColor=white)
+<br>
+![React](https://img.shields.io/badge/React_19-20232A?style=flat-square&logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS_4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)
+![Leaflet](https://img.shields.io/badge/Leaflet-199900?style=flat-square&logo=leaflet&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
+
+[**Getting started**](#getting-started) · [**How accurate is it?**](#how-well-the-models-forecast) · [**Data & models**](docs/data-and-models.md) · [**Deploy**](DEPLOYMENT.md)
+
+</div>
+
+<br>
 
 ![Mission Control: Cyclone Mocha, 2023, with the model forecast and historical analogues](docs/images/mission-control.png)
 
-Its governing rule is that **nothing on screen is invented**. A measured value,
-a model output and a missing value are drawn differently, and a missing one is
-shown as `—` rather than filled in with something plausible. Where a capability
-is not available, the interface says so and explains why.
+> **Nothing on screen is invented.** A measured value, a model output and a
+> missing value are each drawn differently — a missing one appears as `—`, never
+> as a plausible guess. When a capability isn't available, VAIYU says so and
+> explains why.
 
 ---
 
 ## What it does
 
-- **Track and intensity forecasts** at +6, +12 and +24 hours from GRU neural
-  networks, each with its measured error drawn as an uncertainty circle.
-- **Prediction Lab** — rewind any storm to an earlier moment, forecast from what
-  was knowable then, reveal what actually happened, and score the forecast
-  against simple baselines.
-- **Historical analogues** — the past storms whose last 24 hours looked most
-  like this one, offered as a second opinion beside the model.
-- **Storm DNA** — a storm's whole life reduced to nine measured traits and
+- 🎯 **Track & intensity forecasts** — +6, +12 and +24 hour predictions from GRU
+  neural networks, each drawn with its measured error.
+- 🧪 **Prediction Lab** — rewind any storm, forecast from what was knowable then,
+  reveal what really happened, and score the result against simple baselines.
+- 🕰️ **Historical analogues** — the past storms whose last 24 hours looked most
+  like this one, as a second opinion beside the model.
+- 🧬 **Storm DNA** — a storm's whole life reduced to nine measured traits and
   compared against all 4,450 storms in the archive.
-- **Seasons** — storm counts and Accumulated Cyclone Energy season by season,
-  with the North Indian Ocean split into the **Arabian Sea** and the
-  **Bay of Bengal**.
-- **Explorer** — the full archive from 1980 to 2026: search, filter by basin,
-  sea and season, sort by intensity.
+- 📊 **Seasons** — storm counts and Accumulated Cyclone Energy year by year, with
+  the North Indian Ocean split into the **Arabian Sea** and **Bay of Bengal**.
+- 🗺️ **Explorer** — every storm from 1980 to 2026, searchable by name, basin, sea
+  and season.
 
 | Prediction Lab | Seasons |
 | --- | --- |
@@ -107,7 +128,7 @@ Java 17 · Maven 3.9 · Node.js 20+ · Python 3.11+ · PostgreSQL 14+
 ### 1. Clone and create the database
 
 ```bash
-git clone https://github.com/<your-username>/vaiyu.git
+git clone https://github.com/aditya-dalal-24/vaiyu.git
 cd vaiyu
 psql -U postgres -c "CREATE DATABASE vaiyu;"
 ```
@@ -119,7 +140,7 @@ The schema is created automatically by Flyway the first time the backend starts.
 These are not stored in git. Choose one:
 
 **Download them** (fast) — from this repository's
-[Releases](../../releases), download `vaiyu-models-and-data.zip` and unzip it at
+[Releases](https://github.com/aditya-dalal-24/vaiyu/releases), download `vaiyu-models-and-data.zip` and unzip it at
 the repository root. It fills in `ai-service/checkpoints/` and
 `ai-service/data/processed/observations.csv`.
 
@@ -242,5 +263,5 @@ any meteorological agency.
 
 ## License
 
-No license has been chosen yet, which means all rights are reserved by default.
-Add a `LICENSE` file before accepting contributions or allowing reuse.
+Released under the [MIT License](LICENSE) — free to use, modify and share, as long
+as the copyright notice is kept.

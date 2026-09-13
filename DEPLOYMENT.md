@@ -65,7 +65,7 @@ sudo ufw enable
 On the server:
 
 ```bash
-git clone https://github.com/<your-username>/vaiyu.git
+git clone https://github.com/aditya-dalal-24/vaiyu.git
 cd vaiyu
 ```
 
@@ -75,7 +75,7 @@ The trained models and the storm archive are not in git. Download
 
 ```bash
 sudo apt-get install -y unzip
-curl -L -o models.zip https://github.com/<your-username>/vaiyu/releases/latest/download/vaiyu-models-and-data.zip
+curl -L -o models.zip https://github.com/aditya-dalal-24/vaiyu/releases/latest/download/vaiyu-models-and-data.zip
 unzip models.zip
 ```
 
