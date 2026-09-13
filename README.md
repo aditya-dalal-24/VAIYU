@@ -207,6 +207,24 @@ alone would suggest.
 
 ## Running it
 
+**The quick way, on Windows.** With PostgreSQL running and the prerequisites
+below in place, one command builds whatever is missing and starts everything:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1     # add -Rebuild after code changes
+powershell -ExecutionPolicy Bypass -File scripts\ingest-local.ps1    # first run only: load the archive
+powershell -ExecutionPolicy Bypass -File scripts\stop-local.ps1
+```
+
+It runs the packaged backend jar with a 512 MB heap and the production build of
+the console rather than `mvn spring-boot:run` and `npm run dev`. The whole stack
+then uses about 600 MB instead of roughly 1.5 GB — the difference between it
+staying up and Windows killing it on a laptop that also has a browser open.
+Logs are written to `logs\`.
+
+The steps below are the same thing done by hand, and what you need the first
+time.
+
 **Prerequisites:** Java 17, Maven, Node 20+, Python 3.11+, PostgreSQL 14+.
 
 ### 1. Database

@@ -78,7 +78,7 @@ public class SatelliteImageStore {
             byte[] head = in.readNBytes(12);
             if (!ImageSignatures.matches(contentType, head)) {
                 throw new IllegalArgumentException(
-                        "The file's contents are not a " + contentType + " image.");
+                        "The file's contents do not match its declared type, " + contentType + ".");
             }
         } catch (IOException e) {
             throw new IllegalStateException("Could not read the uploaded image.", e);

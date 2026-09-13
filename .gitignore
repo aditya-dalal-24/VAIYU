@@ -105,3 +105,6 @@ frontend/vaiyu-shot.mjs
 !backend/src/main/resources/db/
 !.gitkeep
 backend/*.log
+
+# Output of scripts/start-local.ps1.
+logs/
