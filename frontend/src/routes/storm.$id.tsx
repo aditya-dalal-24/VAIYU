@@ -25,6 +25,7 @@ import { StormDnaPanel } from "@/components/dna/StormDnaPanel";
 import { LazyStormMap } from "@/components/map/LazyStormMap";
 import {
   categoryColorForWind,
+  fmtCelsius,
   fmtCoords,
   fmtDateTime,
   fmtHours,
@@ -282,6 +283,12 @@ function StormProfile() {
                     <th className="label-xs px-3 py-1.5">Position</th>
                     <th className="label-xs px-3 py-1.5 text-right">Wind</th>
                     <th className="label-xs px-3 py-1.5 text-right">Pressure</th>
+                    <th
+                      className="label-xs px-3 py-1.5 text-right"
+                      title="Monthly mean sea-surface temperature at the fix position, NOAA ERSST v5 (2° grid)"
+                    >
+                      Sea
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="num text-[0.6875rem]">
@@ -299,6 +306,9 @@ function StormProfile() {
                       </td>
                       <td className="px-3 py-1 text-right">
                         {fmtPressure(observation.pressureHpa)}
+                      </td>
+                      <td className="px-3 py-1 text-right text-muted-foreground">
+                        {fmtCelsius(observation.seaSurfaceTemperatureC, 1)}
                       </td>
                     </tr>
                   ))}

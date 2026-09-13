@@ -105,8 +105,10 @@ are anticipated; none is in hand yet:
 - *INSAT-3D/3DR via MOSDAC*: the account is active, but the reader is written
   only once a sample file has been checked; see `HANDOFF.md` sections 5 and 10.
 
-**Weather data.** Not wired in, and there is nothing to download for it yet —
-see *Known gaps*.
+**Sea-surface temperature (optional — adds environmental context).** Downloaded
+by the preparation step itself in step 3; no account needed, about 94 MB of NOAA
+ERSST v5 monthly files cached under `data/raw/ersst/`. Humidity and wind shear
+remain unjoined — see *Known gaps*.
 
 ### 3. Prepare
 
@@ -117,6 +119,11 @@ Convert the raw downloads into what training consumes:
 python training/prepare_ibtracs.py \
   --input data/raw/ibtracs.since1980.csv \
   --output data/processed/observations.csv
+
+# Optional: add sea-surface temperature to that table. Downloads NOAA ERSST v5
+# monthly means and samples each fix position. Cached and re-runnable; skip it
+# and every environmental feature simply stays flagged absent.
+python training/prepare_sst.py --observations data/processed/observations.csv
 
 # Imagery -> catalog (only if you have imagery)
 python training/prepare_satellite.py imagefolder \
@@ -294,15 +301,21 @@ No contract change is involved: `imageType` was already a free string.
 
 These are real and stated rather than papered over.
 
-**The environmental features are inert.** Six of the input features — sea
-surface temperature, humidity, wind shear, each with a presence flag — carry no
-information, because IBTrACS has no environmental columns and no weather dataset
-has been joined in. The scaler records them as degenerate and zeroes them at
-inference, so passing `environmentalData` in a request is accepted and changes
-no prediction. The models run on kinematics alone. Filling this in means
-joining a source such as INSAT SST from MOSDAC, or ERA5 via `cdsapi` (free
-account), into the observation table and retraining. The request schema, feature
-layer and presence flags already handle it end to end.
+**Four of the six environmental features are still inert.** Sea-surface
+temperature is now joined — NOAA ERSST v5 monthly means, sampled per fix by
+`training/prepare_sst.py` — and travels the whole way: the backend reads it from
+the base fix, sends it in `environmentalData`, and the feature layer pairs it
+with its presence flag. Humidity and wind shear are not joined, so those four
+features (value and flag each) still carry no information, the scaler records
+them as degenerate, and passing them in a request changes no prediction.
+
+What SST is, stated where it is easy to check: a **monthly mean on a 2-degree
+grid**. It separates the Bay of Bengal in May from the north Atlantic in
+November, and it cannot see a cold wake or a warm eddy, so it describes the
+water mass a storm crossed rather than the water under its core. Daily 0.25-degree
+OISST would be the better field and needs roughly 21 GB for this archive.
+ERA5 humidity and shear via `cdsapi` (free account) are the natural next step
+and would make the remaining four features real.
 
 **Satellite analysis has no imagery.** The architecture, source handling,
 training loop, evaluation and checkpointing are done and verified end to end on

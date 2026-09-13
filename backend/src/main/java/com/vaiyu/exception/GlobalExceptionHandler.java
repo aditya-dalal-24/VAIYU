@@ -112,9 +112,17 @@ public class GlobalExceptionHandler {
         HttpStatus status = ex instanceof ErrorResponse response
                 ? HttpStatus.valueOf(response.getStatusCode().value())
                 : HttpStatus.INTERNAL_SERVER_ERROR;
-        String message = status == HttpStatus.NOT_FOUND
-                ? "No endpoint " + request.getMethod() + " " + request.getRequestURI() + "."
-                : ex.getMessage();
+        String message;
+        if (ex instanceof org.springframework.web.server.ResponseStatusException rse
+                && rse.getReason() != null) {
+            // The reason is written for the caller; getMessage() would prefix
+            // it with the status and wrap it in quotes.
+            message = rse.getReason();
+        } else if (status == HttpStatus.NOT_FOUND) {
+            message = "No endpoint " + request.getMethod() + " " + request.getRequestURI() + ".";
+        } else {
+            message = ex.getMessage();
+        }
         return body(status, status.name(), message, request);
     }
 

@@ -170,9 +170,11 @@ function System() {
             approximated.
           </Limitation>
           <Limitation>
-            It does not use environmental fields. Sea-surface temperature, humidity and wind shear
-            are accepted by the model interface but no such data has been joined to these tracks, so
-            the models run on track history alone.
+            It sees only part of a storm&rsquo;s environment. Sea-surface temperature is joined from
+            NOAA ERSST v5, but as a monthly mean on a 2&deg; grid: it describes the water mass a
+            storm crossed, not the water under its core, and cannot show the cold wake a slow storm
+            leaves behind. Humidity and wind shear are accepted by the model interface and are not
+            joined to anything, so those features stay flagged absent rather than guessed.
           </Limitation>
           <Limitation>
             It does not analyse satellite imagery yet. The pipeline is built and the vision model

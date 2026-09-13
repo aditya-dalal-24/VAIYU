@@ -31,11 +31,15 @@ import os
 import sys
 import time
 
+from typing import Sequence
+
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models.analogue.index import (  # noqa: E402
+    AGGREGATION_MEAN,
+    AGGREGATIONS,
     HORIZONS_HOURS,
     LAG_COLUMNS,
     AnalogueIndex,
@@ -51,13 +55,28 @@ logger = logging.getLogger(__name__)
 DEFAULT_OUTPUT = "checkpoints"
 
 
-def evaluate(train_index: AnalogueIndex, test_index: AnalogueIndex, members: int, curvature: bool = True):
-    """Forecast every held-out window and score it against what happened."""
-    errors = {h: [] for h in HORIZONS_HOURS}
+def evaluate(
+    train_index: AnalogueIndex,
+    test_index: AnalogueIndex,
+    members: int,
+    curvature: bool = True,
+    aggregations: Sequence[str] = (AGGREGATION_MEAN,),
+):
+    """Forecast every held-out window and score it against what happened.
+
+    Several member-weighting schemes are scored in the same pass. Finding the
+    nearest members is the expensive part and is shared between them, so
+    comparing three costs barely more than comparing one — and the comparison
+    has to be on identical windows to mean anything.
+    """
+    primary = aggregations[0]
+    errors = {a: {h: [] for h in HORIZONS_HOURS} for a in aggregations}
+    spreads = {a: {h: [] for h in HORIZONS_HOURS} for a in aggregations}
+    wind_errors = {a: {h: [] for h in HORIZONS_HOURS} for a in aggregations}
+
+    # Baselines do not depend on how members are combined.
     persistence = {h: [] for h in HORIZONS_HOURS}
     linear = {h: [] for h in HORIZONS_HOURS}
-    spreads = {h: [] for h in HORIZONS_HOURS}
-    wind_errors = {h: [] for h in HORIZONS_HOURS}
     wind_persistence = {h: [] for h in HORIZONS_HOURS}
     no_analogues = 0
 
@@ -75,57 +94,77 @@ def evaluate(train_index: AnalogueIndex, test_index: AnalogueIndex, members: int
             no_analogues += 1
             continue
         motion = (-float(vector[east6]), -float(vector[north6])) if curvature else None
-        points = {p["forecast_hours"]: p for p in train_index.forecast(
-            chosen, lat, lon, wind, motion_6h=motion)}
+        points = {
+            aggregation: {
+                p["forecast_hours"]: p
+                for p in train_index.forecast(
+                    chosen, lat, lon, wind, motion_6h=motion, aggregation=aggregation
+                )
+            }
+            for aggregation in aggregations
+        }
 
         # Linear extrapolation continues the last 6 h of motion.
         motion_east = -float(vector[east6])
         motion_north = -float(vector[north6])
 
         for h, hours in enumerate(HORIZONS_HOURS):
-            if not test_index.outcome_mask[row, h] or hours not in points:
+            if not test_index.outcome_mask[row, h]:
                 continue
             true_east, true_north, true_dwind = test_index.outcomes[row, h]
             true_lat, true_lon = _apply_offset(lat, lon, true_east, true_north)
 
-            point = points[hours]
-            errors[hours].append(math.hypot(*_east_north_km(
-                true_lat, true_lon, point["latitude"], point["longitude"])))
+            scored = False
+            for aggregation in aggregations:
+                point = points[aggregation].get(hours)
+                if point is None:
+                    continue
+                errors[aggregation][hours].append(math.hypot(*_east_north_km(
+                    true_lat, true_lon, point["latitude"], point["longitude"])))
+                spreads[aggregation][hours].append(point["spread_km"])
+                wind_errors[aggregation][hours].append(
+                    abs(point["wind_speed_kph"] - (wind + true_dwind)))
+                scored = True
+
+            if not scored:
+                continue
             persistence[hours].append(math.hypot(true_east, true_north))
             scale = hours / 6.0
             linear[hours].append(math.hypot(
                 true_east - motion_east * scale, true_north - motion_north * scale))
-            spreads[hours].append(point["spread_km"])
-            wind_errors[hours].append(abs(point["wind_speed_kph"] - (wind + true_dwind)))
             wind_persistence[hours].append(abs(true_dwind))
 
-    per_horizon = {}
-    for hours in HORIZONS_HOURS:
-        if not errors[hours]:
-            continue
-        err = np.asarray(errors[hours])
-        per_horizon[f"{hours}h"] = {
-            "n": int(err.size),
-            "mean_error_km": round(float(err.mean()), 2),
-            "median_error_km": round(float(np.median(err)), 2),
-            "baseline_persistence_km": round(float(np.mean(persistence[hours])), 2),
-            "baseline_linear_km": round(float(np.mean(linear[hours])), 2),
-            "beats_linear": bool(err.mean() < np.mean(linear[hours])),
-            "mean_spread_km": round(float(np.mean(spreads[hours])), 2),
-            # Is a wide ensemble actually a less reliable one? If not, the
-            # spread is decoration and must not be presented as uncertainty.
-            "spread_error_correlation": round(float(np.corrcoef(spreads[hours], err)[0, 1]), 3),
-            "wind_mae_kph": round(float(np.mean(wind_errors[hours])), 2),
-            "wind_persistence_mae_kph": round(float(np.mean(wind_persistence[hours])), 2),
-        }
+    def summarise(aggregation: str):
+        per_horizon = {}
+        for hours in HORIZONS_HOURS:
+            if not errors[aggregation][hours]:
+                continue
+            err = np.asarray(errors[aggregation][hours])
+            per_horizon[f"{hours}h"] = {
+                "n": int(err.size),
+                "mean_error_km": round(float(err.mean()), 2),
+                "median_error_km": round(float(np.median(err)), 2),
+                "baseline_persistence_km": round(float(np.mean(persistence[hours])), 2),
+                "baseline_linear_km": round(float(np.mean(linear[hours])), 2),
+                "beats_linear": bool(err.mean() < np.mean(linear[hours])),
+                "mean_spread_km": round(float(np.mean(spreads[aggregation][hours])), 2),
+                # Is a wide ensemble actually a less reliable one? If not, the
+                # spread is decoration and must not be presented as uncertainty.
+                "spread_error_correlation": round(
+                    float(np.corrcoef(spreads[aggregation][hours], err)[0, 1]), 3),
+                "wind_mae_kph": round(float(np.mean(wind_errors[aggregation][hours])), 2),
+                "wind_persistence_mae_kph": round(float(np.mean(wind_persistence[hours])), 2),
+            }
+        return per_horizon
 
+    per_horizon = summarise(primary)
     longest = f"{max(HORIZONS_HOURS)}h"
     skill = None
     if longest in per_horizon:
         row = per_horizon[longest]
         skill = round(max(0.0, 1.0 - row["mean_error_km"] / row["baseline_persistence_km"]), 3)
 
-    return {
+    metrics = {
         "per_horizon": per_horizon,
         "validation_skill": skill,
         "queries": len(test_index),
@@ -136,6 +175,16 @@ def evaluate(train_index: AnalogueIndex, test_index: AnalogueIndex, members: int
             "horizon on held-out storms, 1 - error / persistence_error"
         ),
     }
+
+    # Every scheme scored on the same windows, so the choice between them is a
+    # measurement rather than a preference. The one actually served is
+    # `aggregation_served`.
+    if len(aggregations) > 1:
+        metrics["by_aggregation"] = {
+            aggregation: summarise(aggregation) for aggregation in aggregations
+        }
+    metrics["aggregation_served"] = primary
+    return metrics
 
 
 def main(args) -> int:
@@ -161,7 +210,9 @@ def main(args) -> int:
         len(train_index), train_index.storm_count, len(test_index),
     )
 
-    metrics = evaluate(train_index, test_index, args.members, curvature=True)
+    metrics = evaluate(
+        train_index, test_index, args.members, curvature=True, aggregations=AGGREGATIONS
+    )
     # The first design, averaging absolute displacements, kept as a recorded
     # comparison: it lost to linear extrapolation, which is why it is not served.
     absolute = evaluate(train_index, test_index, args.members, curvature=False)

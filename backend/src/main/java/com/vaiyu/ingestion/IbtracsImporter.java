@@ -182,7 +182,7 @@ public class IbtracsImporter {
                     cycloneId,
                     java.sql.Timestamp.from(row.observedAt()),
                     row.latitude(), row.longitude(),
-                    row.windSpeedKph(), row.pressureHpa(),
+                    row.windSpeedKph(), row.pressureHpa(), row.seaSurfaceTemperatureC(),
                     OBSERVATION_SOURCE,
                     row.stormId() + "@" + row.observedAt()
             });
@@ -212,9 +212,16 @@ public class IbtracsImporter {
         jdbc.batchUpdate("""
                 INSERT INTO cyclone_observations
                     (cyclone_id, observed_at, latitude, longitude,
-                     wind_speed_kph, pressure_hpa, source, source_record_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT (cyclone_id, observed_at, source) DO NOTHING
+                     wind_speed_kph, pressure_hpa, sea_surface_temperature_c,
+                     source, source_record_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                -- Re-running after a retrain must be able to fill in a column
+                -- that did not exist when a fix was first stored, so this one
+                -- is updated in place rather than left alone.
+                ON CONFLICT (cyclone_id, observed_at, source) DO UPDATE
+                    SET sea_surface_temperature_c =
+                            COALESCE(EXCLUDED.sea_surface_temperature_c,
+                                     cyclone_observations.sea_surface_temperature_c)
                 """, batch);
         int size = batch.size();
         batch.clear();
@@ -267,8 +274,8 @@ public class IbtracsImporter {
 
     private record Row(
             String stormId, Instant observedAt, double latitude, double longitude,
-            Double windSpeedKph, Double pressureHpa, Integer season, String basin,
-            String subBasin, String stormName
+            Double windSpeedKph, Double pressureHpa, Double seaSurfaceTemperatureC,
+            Integer season, String basin, String subBasin, String stormName
     ) {
     }
 
@@ -309,6 +316,9 @@ public class IbtracsImporter {
                             Double.parseDouble(parts[column.get("longitude")]),
                             optionalDouble(parts, column.get("wind_speed_kph")),
                             optionalDouble(parts, column.get("pressure_hpa")),
+                            // Absent in tables produced before SST was joined,
+                            // which reads as "not stated" rather than an error.
+                            optionalDouble(parts, column.get("sea_surface_temperature_c")),
                             optionalInt(parts, column.get("season")),
                             optionalString(parts, column.get("basin")),
                             // Older tables have no sub_basin column at all;

@@ -45,7 +45,7 @@ public class SatelliteImageStore {
 
     public SatelliteImageStore(
             @Value("${vaiyu.satellite.storage-dir:./data/satellite-uploads}") String dir,
-            @Value("${vaiyu.public-base-url:http://localhost:8080}") String publicBaseUrl) {
+            @Value("${vaiyu.public-base-url:http://localhost:8081}") String publicBaseUrl) {
         this.directory = Path.of(dir).toAbsolutePath().normalize();
         this.publicBaseUrl = publicBaseUrl.replaceAll("/+$", "");
     }
@@ -70,6 +70,20 @@ public class SatelliteImageStore {
                             + String.join(", ", EXTENSIONS.keySet()));
         }
 
+        // The declared content type comes from the client and proves nothing:
+        // an HTML page labelled image/png would otherwise be stored and served
+        // back from this API's own origin. The file's leading bytes must match
+        // the format it claims to be.
+        try (var in = file.getInputStream()) {
+            byte[] head = in.readNBytes(12);
+            if (!ImageSignatures.matches(contentType, head)) {
+                throw new IllegalArgumentException(
+                        "The file's contents are not a " + contentType + " image.");
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("Could not read the uploaded image.", e);
+        }
+
         String id = UUID.randomUUID() + extension;
         try {
             Files.createDirectories(directory);
@@ -84,6 +98,27 @@ public class SatelliteImageStore {
 
     public String urlFor(String id) {
         return publicBaseUrl + "/api/v1/satellite/images/" + id;
+    }
+
+    /**
+     * Whether a URL points at an image this service stored and still holds.
+     *
+     * <p>This is what stops the analysis endpoint being a request-forgery
+     * primitive. The AI service fetches whatever URL it is handed, from inside
+     * the network, so an arbitrary caller-supplied URL would let anyone make it
+     * fetch the database port, another internal service, or a cloud metadata
+     * endpoint. Requiring the exact stored-image prefix and an id that resolves
+     * to a real file in the upload directory closes that off.
+     */
+    public boolean isStoredImageUrl(String url) {
+        if (url == null) {
+            return false;
+        }
+        String prefix = publicBaseUrl + "/api/v1/satellite/images/";
+        if (!url.startsWith(prefix)) {
+            return false;
+        }
+        return load(url.substring(prefix.length())).isPresent();
     }
 
     public Optional<Resource> load(String id) {

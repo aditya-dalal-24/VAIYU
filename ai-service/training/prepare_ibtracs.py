@@ -14,18 +14,28 @@ quantity. Training across that bakes in a systematic bias that never shows up
 as an error. Pressure is a central minimum rather than an average, so
 ``WMO_PRES`` is a safe fallback where ``USA_PRES`` is missing.
 
-**Only tropical stages are kept.** Extratropical, subtropical, disturbance and
-mixed fixes are a different physical regime and would teach the model motion it
-will never be asked to forecast. Uncoded (``NR``) fixes are kept, but only
-inside storms that are coded ``TS`` somewhere in their track: measured against
-this archive, such fixes sit at a median 12.7 degrees of latitude against 41.5
-for extratropical ones, and 416 of the 563 storms carrying them are coded
-tropical elsewhere, so they are gap-coding within a real storm rather than a
-different phenomenon. The live adapter already accepts ``NR``
-(``TROPICAL_NATURES`` in ``preprocessing/ibtracs_live.py``), so excluding them
-here made training disagree with what the running service is handed. The 190
-storms that are *never* coded tropical are still excluded: nothing in the
-archive says what they were.
+**Only tropical stages are kept, and ``NR`` counts as one.** Extratropical,
+subtropical, disturbance and mixed fixes are positively coded as something
+else, are a different physical regime, and would teach the model motion it will
+never be asked to forecast. They stay out.
+
+``NR`` is different: it means *not reported*, not *not tropical*. Measured
+against this archive its fixes sit at a median 12.7 degrees of latitude against
+41.5 for extratropical ones, so they are tropical in character, and the live
+adapter has always accepted them (``TROPICAL_NATURES`` in
+``preprocessing/ibtracs_live.py``).
+
+An earlier version of this file kept ``NR`` only inside storms coded ``TS``
+somewhere, on the theory that those were gap-coded real storms and the rest were
+unclassifiable. The North Indian Ocean shows why that was wrong. Between 1990
+and 1995 the basin has 1,952 ``NR`` fixes and 57 ``TS`` ones: only 5 of its 58
+storms carry a single ``TS`` fix, because that is simply how the agency recorded
+the basin then. The restriction therefore deleted six consecutive seasons of
+Indian Ocean cyclones -- among them 1991113N10091, the April 1991 Bangladesh
+cyclone, which has 65 fixes every one of which reports a ``USA_WIND`` and is
+coded ``NR`` throughout, and which killed on the order of 138,000 people. A
+filter that silently erases the deadliest storm in the record is not a
+conservative filter; it is a broken one.
 
 **Pressure is optional; wind is not.** A fix needs a position and a wind to be
 usable, because every sequence feature and every target is built from those.
@@ -74,8 +84,8 @@ logger = logging.getLogger(__name__)
 KNOTS_TO_KPH = 1.852
 
 # IBTrACS marks the tropical-cyclone stage as TS. NR means no agency coded the
-# nature of that fix; see the module docstring for why those are kept only
-# within storms that are coded TS somewhere.
+# nature of that fix, which in some basins and eras is every fix there is; see
+# the module docstring for why those are kept.
 TROPICAL_NATURE = "TS"
 UNCODED_NATURE = "NR"
 
@@ -108,15 +118,11 @@ def convert(input_path: str, basins=None) -> pd.DataFrame:
     for column in NUMERIC_COLUMNS:
         frame[column] = pd.to_numeric(frame[column], errors="coerce")
 
-    tropical_storms = set(frame.loc[frame["NATURE"] == TROPICAL_NATURE, "SID"].unique())
-    keep_nature = (
-        frame["NATURE"].isin([TROPICAL_NATURE, UNCODED_NATURE])
-        & frame["SID"].isin(tropical_storms)
-    )
-    uncoded = int(((frame["NATURE"] == UNCODED_NATURE) & keep_nature).sum())
+    keep_nature = frame["NATURE"].isin([TROPICAL_NATURE, UNCODED_NATURE])
+    uncoded = int((frame["NATURE"] == UNCODED_NATURE).sum())
     frame = frame[keep_nature]
     logger.info(
-        "%d tropical-stage rows (%d of them uncoded fixes inside tropical storms)",
+        "%d tropical-stage rows (%d of them fixes whose nature was never coded)",
         len(frame),
         uncoded,
     )

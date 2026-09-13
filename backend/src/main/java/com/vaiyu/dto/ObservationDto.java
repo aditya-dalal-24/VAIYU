@@ -17,6 +17,12 @@ public record ObservationDto(
         double longitude,
         Double windSpeedKph,
         Double pressureHpa,
+        /**
+         * Monthly mean SST at this position from NOAA ERSST v5, or null where
+         * the product has none. A monthly mean on a 2-degree grid: the water
+         * mass the storm crossed, not the water under its core.
+         */
+        Double seaSurfaceTemperatureC,
         Double movementSpeedKph,
         Double movementDirectionDegrees,
         String category,
@@ -31,6 +37,7 @@ public record ObservationDto(
                 o.getLongitude(),
                 o.getWindSpeedKph(),
                 o.getPressureHpa(),
+                o.getSeaSurfaceTemperatureC(),
                 o.getMovementSpeedKph(),
                 o.getMovementDirectionDegrees(),
                 IntensityScale.labelOf(o.getWindSpeedKph()),

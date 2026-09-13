@@ -158,11 +158,12 @@ class TestPressureIsOptional:
 
 
 class TestUncodedFixes:
-    """``NR`` means no agency coded the nature of that fix.
+    """``NR`` means *not reported*, not *not tropical*.
 
-    Kept inside storms that are coded tropical somewhere -- the live adapter
-    accepts them, so excluding them made training disagree with serving -- and
-    excluded when nothing in the archive ever called the storm tropical.
+    Keeping it only inside storms coded ``TS`` somewhere deleted six
+    consecutive North Indian Ocean seasons, because between 1990 and 1995 that
+    basin has 1,952 ``NR`` fixes against 57 ``TS`` ones -- including the April
+    1991 Bangladesh cyclone, coded ``NR`` for all 65 of its wind-bearing fixes.
     """
 
     def test_uncoded_gaps_inside_a_tropical_storm_are_kept(self, tmp_path):
@@ -175,7 +176,9 @@ class TestUncodedFixes:
 
         assert len(table) == 3
 
-    def test_a_storm_never_coded_tropical_is_excluded_entirely(self, tmp_path):
+    def test_a_storm_coded_only_uncoded_is_still_kept(self, tmp_path):
+        # This is the 1990s North Indian case: every fix of a real cyclone
+        # carries a wind and no agency ever filled in its nature.
         table = convert(write(
             tmp_path,
             row(sid="uncoded", time="2020-01-01 00:00:00", nature="NR"),
@@ -183,7 +186,7 @@ class TestUncodedFixes:
             row(sid="tropical", time="2020-01-01 00:00:00", nature="TS"),
         ))
 
-        assert table["cyclone_id"].unique().tolist() == ["tropical"]
+        assert sorted(table["cyclone_id"].unique().tolist()) == ["tropical", "uncoded"]
 
     def test_other_stages_are_still_excluded(self, tmp_path):
         table = convert(write(

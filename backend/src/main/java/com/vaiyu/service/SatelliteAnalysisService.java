@@ -16,6 +16,7 @@ import com.vaiyu.repository.CycloneRepository;
 import com.vaiyu.repository.SatelliteAnalysisRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,15 +51,22 @@ public class SatelliteAnalysisService {
     private final CycloneRepository cyclones;
     private final CycloneObservationRepository observations;
     private final SatelliteAnalysisRepository analyses;
+    private final SatelliteImageStore images;
+    private final boolean allowExternalUrls;
 
     public SatelliteAnalysisService(AiServiceClient ai,
                                     CycloneRepository cyclones,
                                     CycloneObservationRepository observations,
-                                    SatelliteAnalysisRepository analyses) {
+                                    SatelliteAnalysisRepository analyses,
+                                    SatelliteImageStore images,
+                                    @Value("${vaiyu.satellite.allow-external-urls:false}")
+                                    boolean allowExternalUrls) {
         this.ai = ai;
         this.cyclones = cyclones;
         this.observations = observations;
         this.analyses = analyses;
+        this.images = images;
+        this.allowExternalUrls = allowExternalUrls;
     }
 
     @Transactional
@@ -67,6 +75,16 @@ public class SatelliteAnalysisService {
 
         if (imageUrl == null || imageUrl.isBlank()) {
             throw new IllegalArgumentException("An image URL is required.");
+        }
+        // Only images this service stored may be analysed. The AI service
+        // fetches the URL from inside the network, so accepting an arbitrary
+        // one would let any caller make it request internal hosts or a cloud
+        // metadata endpoint. A trusted deployment that genuinely needs to
+        // analyse external imagery can opt in explicitly.
+        if (!allowExternalUrls && !images.isStoredImageUrl(imageUrl)) {
+            throw new IllegalArgumentException(
+                    "Only images uploaded to this service can be analysed. Upload the frame "
+                            + "first and use the URL the upload returns.");
         }
         if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
             throw new IllegalArgumentException(

@@ -118,6 +118,80 @@ public interface CycloneRepository extends JpaRepository<Cyclone, UUID> {
         String getCode();
     }
 
+    /**
+     * Season-by-season activity, grouped by the sea a storm formed in.
+     *
+     * <p>Native SQL for two reasons JPQL cannot serve: Accumulated Cyclone
+     * Energy needs a squared sum over fixes, and naming the strongest storm of
+     * each group needs a per-group ordering. Both are computed in the database
+     * over 109,000 fixes rather than pulled into memory.
+     *
+     * <p>The 62.9 kph floor is 34 knots, the threshold ACE is defined on. It is
+     * written as 62.9 rather than 63 deliberately: 34 kt converts to 62.968
+     * kph, so a fix reported at exactly 34 kt would fall below a 63 kph
+     * comparison and silently vanish from the season it belongs to.
+     */
+    @Query(value = """
+            with active as (
+                select c.season_year as season,
+                       c.sub_basin as sub_basin,
+                       count(distinct c.id) as storms,
+                       sum(power(o.wind_speed_kph / 1.852, 2)) / 10000.0 as ace,
+                       max(o.wind_speed_kph) as peak_wind_kph
+                from cyclones c
+                join cyclone_observations o on o.cyclone_id = c.id
+                where (:basin is null or c.basin = :basin)
+                  and o.wind_speed_kph >= 62.9
+                  and c.season_year is not null
+                group by c.season_year, c.sub_basin
+            ),
+            strongest as (
+                select distinct on (c.season_year, c.sub_basin)
+                       c.season_year as season,
+                       c.sub_basin as sub_basin,
+                       c.id as storm_id,
+                       c.name as storm_name,
+                       c.external_id as storm_external_id
+                from cyclones c
+                join cyclone_observations o on o.cyclone_id = c.id
+                where (:basin is null or c.basin = :basin)
+                  and o.wind_speed_kph >= 62.9
+                  and c.season_year is not null
+                order by c.season_year, c.sub_basin, o.wind_speed_kph desc
+            )
+            select a.season as season,
+                   a.sub_basin as subBasin,
+                   a.storms as storms,
+                   a.ace as ace,
+                   a.peak_wind_kph as peakWindKph,
+                   coalesce(s.storm_name, s.storm_external_id) as strongestStorm,
+                   s.storm_id as strongestStormId
+            from active a
+            left join strongest s
+                on s.season = a.season
+               and (s.sub_basin = a.sub_basin
+                    or (s.sub_basin is null and a.sub_basin is null))
+            order by a.season desc, a.sub_basin
+            """, nativeQuery = true)
+    List<SeasonActivityRow> findSeasonActivity(@Param("basin") String basin);
+
+    /** Projection for {@link #findSeasonActivity}. */
+    interface SeasonActivityRow {
+        int getSeason();
+
+        String getSubBasin();
+
+        long getStorms();
+
+        double getAce();
+
+        Double getPeakWindKph();
+
+        String getStrongestStorm();
+
+        UUID getStrongestStormId();
+    }
+
     @Query("select distinct c.basin from Cyclone c where c.basin is not null order by c.basin")
     List<String> findBasins();
 

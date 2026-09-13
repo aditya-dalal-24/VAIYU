@@ -133,14 +133,43 @@ class AiRequestFactoryTest {
     }
 
     @Test
-    @DisplayName("no environmental data is invented")
-    void sendsNoEnvironmentalData() {
+    @DisplayName("no environmental data is invented when the fix has none")
+    void sendsNoEnvironmentalDataWhenTheFixHasNone() {
         AiRequestFactory.Plan plan =
                 factory.build(CYCLONE, synopticTrack(4), null, ANALYSES, null);
 
-        // No weather data has been joined to these tracks. Sending a plausible
-        // sea-surface temperature would be fabricated input.
+        // ERSST has no value over land or ice, and the fixes here carry none.
+        // Sending a plausible sea-surface temperature would be fabricated
+        // input; the model reads the absence through its presence flag.
         assertThat(plan.request().environmentalData()).isNull();
+    }
+
+    @Test
+    @DisplayName("a stored sea-surface temperature is sent as measured")
+    void sendsStoredSeaSurfaceTemperature() {
+        List<CycloneObservation> track = synopticTrack(4);
+        track.get(track.size() - 1).setSeaSurfaceTemperatureC(30.1);
+
+        AiRequestFactory.Plan plan = factory.build(CYCLONE, track, null, ANALYSES, null);
+
+        // Taken from the base fix, which is the one the forecast is made from,
+        // and passed through unrounded and unscaled.
+        assertThat(plan.request().environmentalData()).isNotNull();
+        assertThat(plan.request().environmentalData().seaSurfaceTemperatureC()).isEqualTo(30.1);
+    }
+
+    @Test
+    @DisplayName("humidity and wind shear stay absent, because nothing supplies them")
+    void sendsOnlyWhatExists() {
+        List<CycloneObservation> track = synopticTrack(4);
+        track.get(track.size() - 1).setSeaSurfaceTemperatureC(28.4);
+
+        AiRequestFactory.Plan plan = factory.build(CYCLONE, track, null, ANALYSES, null);
+
+        // The contract accepts all three. Only one is joined to this archive,
+        // and the other two must not be filled in to look complete.
+        assertThat(plan.request().environmentalData().humidityPercent()).isNull();
+        assertThat(plan.request().environmentalData().windShearKph()).isNull();
     }
 
     private static List<CycloneObservation> synopticTrack(int count) {

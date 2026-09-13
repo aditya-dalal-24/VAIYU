@@ -45,6 +45,7 @@ losing its history.
 | Basins | WP 1271, EP 937, SI 736, NA 710, SP 451, NI 199, SA 1 |
 | North Indian Ocean | Bay of Bengal 136, Arabian Sea 63 |
 | Scale | Saffir-Simpson, which is defined for 1-minute winds |
+| Environment | Sea-surface temperature: NOAA ERSST v5 monthly means, 2° grid |
 
 A storm is filed under the basin and sub-basin it **formed** in, which is why
 those counts sum to the total exactly. Twenty more storms formed elsewhere and
@@ -72,14 +73,21 @@ dropout, and the intensity loss and metrics mask the pressure component per fix
 so an absent reading contributes nothing rather than being learned as "no
 change".
 
-Uncoded fixes (IBTrACS `NATURE = NR`) are kept, but only inside storms coded
-tropical somewhere in their track. Measured against this archive they sit at a
-median 12.7° of latitude against 41.5° for extratropical ones, and 416 of the
-563 storms carrying them are coded tropical elsewhere — they are gap-coding
-within a real storm. The live adapter already accepted them, so excluding them
-had made training disagree with what the running service is handed. The 190
-storms that are *never* coded tropical stay out: nothing in the archive says
-what they were.
+Uncoded fixes (IBTrACS `NATURE = NR`) are kept. `NR` means *not reported*, not
+*not tropical*: measured against this archive those fixes sit at a median 12.7°
+of latitude against 41.5° for extratropical ones, and the live adapter has
+always accepted them. Fixes positively coded as something else — extratropical,
+subtropical, disturbance, mixed — stay out.
+
+That rule was briefly stricter, keeping `NR` only inside storms coded `TS`
+somewhere, and the North Indian Ocean is why it is not. Between 1990 and 1995
+that basin has **1,952 `NR` fixes against 57 `TS`** ones: only 5 of its 58
+storms carry a single `TS` fix, because that is simply how the basin was
+recorded then. The restriction deleted six consecutive Indian Ocean seasons,
+among them the **April 1991 Bangladesh cyclone** — 33 synoptic fixes, every one
+reporting a wind, coded `NR` throughout, peak 259 kph, and one of the deadliest
+tropical cyclones ever recorded. A filter that silently erases the deadliest
+storm in the record is not conservative, it is broken.
 
 The **Arabian Sea** and the **Bay of Bengal** are one IBTrACS basin (NI) but two
 seas on opposite sides of the Indian peninsula, so the sub-basin is stored and
@@ -326,6 +334,11 @@ the observation ids it used, so that ordering stays verifiable after the fact.
   A number computed without them would look authoritative and mean nothing.
 - **Live storm feeds and alerting.** The archive ends at its last fix. Nothing
   here is a warning product.
+- **Humidity and wind shear.** The model interface accepts both and nothing
+  supplies them, so those features stay flagged absent rather than filled in.
+  Sea-surface temperature *is* joined, from NOAA ERSST v5 — a monthly mean on a
+  2° grid, which describes the water mass a storm crossed rather than the water
+  under its core, and cannot show a cold wake.
 - **Explainability heatmaps.** The extension point exists; no model here
   produces attributions yet.
 

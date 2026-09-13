@@ -72,6 +72,12 @@ KM_PER_DEGREE_LONGITUDE_AT_EQUATOR = 111.320
 
 # Same-storm exclusion: an archive storm with any fix this close in space and
 # time to the query's current fix is probably the query storm itself.
+# How the members of an ensemble are combined into one forecast.
+AGGREGATION_MEAN = "mean"
+AGGREGATION_MEDIAN = "median"
+AGGREGATION_DISTANCE = "distance_weighted"
+AGGREGATIONS = (AGGREGATION_MEAN, AGGREGATION_MEDIAN, AGGREGATION_DISTANCE)
+
 SAME_STORM_DEGREES = 3.0
 SAME_STORM_HOURS = 48.0
 
@@ -422,6 +428,7 @@ class AnalogueIndex:
         lon: float,
         wind: float,
         motion_6h: Optional[tuple[float, float]] = None,
+        aggregation: str = AGGREGATION_MEAN,
     ) -> List[Dict[str, object]]:
         """Aggregate the members' outcomes into a forecast per horizon.
 
@@ -433,13 +440,23 @@ class AnalogueIndex:
         measured worse than plain linear extrapolation on held-out storms; the
         deviation is the part extrapolation cannot know. Without ``motion_6h``
         (no fix 6 h back) the absolute displacements are used.
+
+        ``aggregation`` chooses how the members are combined: the plain mean,
+        their median, or a mean weighted by closeness. Which of the three is
+        best is a measured question, not an obvious one, so
+        ``training/build_analogue_index.py`` scores all three on the same
+        held-out windows in one pass and records them side by side.
         """
         east6, north6 = LAG_COLUMNS[6]
         points = []
         for h, hours in enumerate(HORIZONS_HOURS):
-            rows = [c["row"] for c in chosen if self.outcome_mask[c["row"], h]]
+            usable = [c for c in chosen if self.outcome_mask[c["row"], h]]
+            rows = [c["row"] for c in usable]
             if not rows:
                 continue
+            # Weights travel with the rows so a member dropped for having no
+            # outcome at this horizon cannot shift the weighting of the rest.
+            weights = _weights_for(usable, aggregation)
             scale = hours / 6.0
             if motion_6h is not None:
                 # Member position = query's own extrapolation + member's deviation
@@ -455,7 +472,11 @@ class AnalogueIndex:
                 member_north = self.outcomes[rows, h, 1]
 
             members = [_apply_offset(lat, lon, e, n) for e, n in zip(member_east, member_north)]
-            mean_lat, mean_lon = _apply_offset(lat, lon, float(np.mean(member_east)), float(np.mean(member_north)))
+            mean_lat, mean_lon = _apply_offset(
+                lat, lon,
+                _combine(member_east, weights, aggregation),
+                _combine(member_north, weights, aggregation),
+            )
             spread = float(np.mean([
                 math.hypot(*_east_north_km(mean_lat, mean_lon, m_lat, m_lon))
                 for m_lat, m_lon in members
@@ -464,11 +485,47 @@ class AnalogueIndex:
                 "forecast_hours": hours,
                 "latitude": round(mean_lat, 3),
                 "longitude": round(mean_lon, 3),
-                "wind_speed_kph": round(max(0.0, wind + float(np.mean(self.outcomes[rows, h, 2]))), 1),
+                "wind_speed_kph": round(max(0.0, wind + _combine(
+                    self.outcomes[rows, h, 2], weights, aggregation)), 1),
                 "spread_km": round(spread, 1),
                 "member_count": len(rows),
             })
         return points
+
+
+def _weights_for(usable: Sequence[Dict[str, object]], aggregation: str) -> np.ndarray:
+    """Per-member weights for the chosen scheme.
+
+    Closeness weighting uses 1/(distance + eps), so a member that matched the
+    query almost exactly counts for more than the tenth-nearest. The epsilon
+    keeps an exact match from taking the whole weight, which would turn a
+    ten-member ensemble into a single storm.
+    """
+    if aggregation != AGGREGATION_DISTANCE:
+        return np.ones(len(usable), dtype=float)
+    distances = np.asarray([float(c["distance"]) for c in usable], dtype=float)
+    # A member can carry an infinite distance: `_distance` ranks a window that
+    # lacks a whole feature group the query has last rather than dropping it.
+    # It gets no weight -- but if every member is like that, there is nothing
+    # to prefer between them, so they fall back to equal weights instead of
+    # dividing by zero.
+    finite = np.isfinite(distances)
+    if not finite.any():
+        return np.ones(len(usable), dtype=float)
+    weights = np.zeros(len(usable), dtype=float)
+    weights[finite] = 1.0 / (distances[finite] + 0.05)
+    return weights
+
+
+def _combine(values: np.ndarray, weights: np.ndarray, aggregation: str) -> float:
+    """Reduce members to one number under the chosen scheme."""
+    values = np.asarray(values, dtype=float)
+    if aggregation == AGGREGATION_MEDIAN:
+        # Robust to one member that went somewhere nothing else did.
+        return float(np.median(values))
+    if aggregation == AGGREGATION_DISTANCE:
+        return float(np.average(values, weights=weights))
+    return float(np.mean(values))
 
 
 def motion_from(vector: np.ndarray, present: np.ndarray) -> Optional[tuple[float, float]]:

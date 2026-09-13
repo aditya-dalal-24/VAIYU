@@ -27,6 +27,7 @@ import { LazyStormMap } from "@/components/map/LazyStormMap";
 import { TrackTimeline } from "@/components/timeline/TrackTimeline";
 import {
   categoryColorForWind,
+  fmtCelsius,
   fmtCoords,
   fmtDateTime,
   fmtHours,
@@ -201,6 +202,17 @@ function MissionControl() {
                     label="Pressure"
                     value={fmtPressure(selected.pressureHpa)}
                     source="observed"
+                  />
+                  {/*
+                    Marked observed because it is a measurement, but the unit
+                    hint carries the caveat: a monthly mean on a 2° grid is the
+                    water mass the storm crossed, not the water under its core.
+                  */}
+                  <Metric
+                    label="Sea surface"
+                    value={fmtCelsius(selected.seaSurfaceTemperatureC)}
+                    source="observed"
+                    unitHint="monthly mean, NOAA ERSST v5"
                   />
                 </div>
               ) : (

@@ -164,11 +164,19 @@ public class AiRequestFactory {
                 analysisTypes,
                 toPayload(base),
                 history,
-                // Environmental inputs are deliberately not sent. No weather
-                // data has been joined to these tracks, and the AI service
-                // treats those features as absent anyway; inventing a value
-                // here would be fabricated input.
-                null,
+                /*
+                 * Environmental context, when the base fix has any.
+                 *
+                 * Only sea-surface temperature is ever populated, because that
+                 * is the only field joined to this archive: NOAA ERSST v5
+                 * monthly means, sampled at each fix by the AI service's own
+                 * preparation step, so a forecast is handed the same quantity
+                 * the model was trained on. Humidity and wind shear stay null
+                 * because nothing supplies them, and the models read that
+                 * absence through a presence flag. Sending a plausible number
+                 * instead would be fabricated input.
+                 */
+                environmentOf(base),
                 image
         );
 
@@ -178,6 +186,21 @@ public class AiRequestFactory {
     private static boolean isSynoptic(CycloneObservation observation) {
         var utc = observation.getObservedAt().atZone(ZoneOffset.UTC);
         return SYNOPTIC_HOURS.contains(utc.getHour()) && utc.getMinute() == 0;
+    }
+
+    /**
+     * The environmental vector for a fix, or null when it has nothing in it.
+     *
+     * <p>Null rather than a record of three nulls: the contract makes the whole
+     * object optional, and an empty one would suggest the question was asked
+     * and answered with nothing, rather than not asked.
+     */
+    private static AiAnalysisRequest.EnvironmentalData environmentOf(CycloneObservation base) {
+        Double seaSurfaceTemperature = base.getSeaSurfaceTemperatureC();
+        if (seaSurfaceTemperature == null) {
+            return null;
+        }
+        return new AiAnalysisRequest.EnvironmentalData(seaSurfaceTemperature, null, null);
     }
 
     private static AiAnalysisRequest.Observation toPayload(CycloneObservation o) {

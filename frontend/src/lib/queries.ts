@@ -17,6 +17,7 @@ const ARCHIVE_STALE = 30 * 60 * 1000;
 export const keys = {
   systemStatus: ["system-status"] as const,
   filters: ["cyclone-filters"] as const,
+  seasonActivity: (basin: string) => ["season-activity", basin] as const,
   cyclones: (params: unknown) => ["cyclones", params] as const,
   cyclone: (id: string) => ["cyclone", id] as const,
   track: (id: string) => ["track", id] as const,
@@ -43,6 +44,15 @@ export function useFilters() {
   return useQuery({
     queryKey: keys.filters,
     queryFn: api.filters,
+    staleTime: ARCHIVE_STALE,
+  });
+}
+
+/** Season-by-season activity. As static as the archive, so cached hard. */
+export function useSeasonActivity(basin: string) {
+  return useQuery({
+    queryKey: keys.seasonActivity(basin),
+    queryFn: () => api.seasonActivity(basin || undefined),
     staleTime: ARCHIVE_STALE,
   });
 }

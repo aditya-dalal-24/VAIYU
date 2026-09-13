@@ -4,6 +4,7 @@ import com.vaiyu.dto.CycloneDetailDto;
 import com.vaiyu.dto.CycloneSummaryDto;
 import com.vaiyu.dto.ObservationDto;
 import com.vaiyu.dto.PageResponse;
+import com.vaiyu.dto.SeasonActivityDto;
 import com.vaiyu.dto.StormDnaDto;
 import com.vaiyu.service.CycloneQueryService;
 import com.vaiyu.service.StormDnaService;
@@ -76,6 +77,22 @@ public class CycloneController {
     @GetMapping("/{id}/observations")
     public ResponseEntity<List<ObservationDto>> observations(@PathVariable UUID id) {
         return ResponseEntity.ok(cyclones.track(id));
+    }
+
+    /**
+     * Season-by-season activity, one row per season and sea.
+     *
+     * <p>Counted from stored fixes: how many storms reached tropical-storm
+     * force, their combined Accumulated Cyclone Energy, and the strongest
+     * storm of each group. Filtering by basin is what makes it useful — the
+     * Arabian Sea and the Bay of Bengal are the comparison people on the
+     * Indian coasts care about, and they are two seas within one basin code.
+     *
+     * @param basin IBTrACS basin code, e.g. NI; omit for every basin
+     */
+    @GetMapping("/seasons")
+    public List<SeasonActivityDto> seasons(@RequestParam(required = false) String basin) {
+        return cyclones.seasonActivity(basin);
     }
 
     /**

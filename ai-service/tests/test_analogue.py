@@ -18,6 +18,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.services import extensions
+import models.analogue.index as index_module
 from models.analogue.index import (
     GROUPS,
     AnalogueError,
@@ -267,3 +268,105 @@ class TestApi:
             assert "12 hours" in block["reason"]
         finally:
             reset_registry()
+
+
+class TestAggregationSchemes:
+    """How ten members become one forecast is a measured choice, not a default.
+
+    The equal-weighted mean has always been served. These pin the two
+    alternatives so that whichever the evaluation picks, the others stay
+    available and behave as their names claim.
+    """
+
+    @staticmethod
+    def _chosen(index, members=5):
+        fixes = eastward_query()
+        newest, vector, present = query_from_track(fixes)
+        return newest, index.query(
+            vector, present, newest.timestamp, newest.latitude, newest.longitude,
+            members=members,
+        )
+
+    def test_every_scheme_produces_a_forecast_for_the_same_members(self, index):
+        newest, chosen = self._chosen(index)
+        assert chosen, "fixture must find members"
+
+        for aggregation in index_module.AGGREGATIONS:
+            points = index.forecast(
+                chosen, newest.latitude, newest.longitude, newest.wind_speed_kph,
+                aggregation=aggregation,
+            )
+            assert points, f"{aggregation} produced no points"
+            for point in points:
+                assert point["member_count"] >= 1
+                assert -90 <= point["latitude"] <= 90
+
+    def test_the_schemes_agree_on_which_horizons_they_cover(self, index):
+        newest, chosen = self._chosen(index)
+
+        horizons = {
+            aggregation: [
+                p["forecast_hours"]
+                for p in index.forecast(
+                    chosen, newest.latitude, newest.longitude, newest.wind_speed_kph,
+                    aggregation=aggregation,
+                )
+            ]
+            for aggregation in index_module.AGGREGATIONS
+        }
+
+        # A scheme may move the forecast; it must never change which horizons
+        # are answerable, or the comparison between them is not like for like.
+        assert len({tuple(v) for v in horizons.values()}) == 1
+
+    def test_an_exact_match_does_not_take_the_whole_weight(self):
+        # Without the epsilon a zero distance would make one member the entire
+        # ensemble, and the spread would collapse to zero.
+        weights = index_module._weights_for(
+            [{"row": 0, "distance": 0.0}, {"row": 1, "distance": 0.5}],
+            index_module.AGGREGATION_DISTANCE,
+        )
+
+        assert weights[0] > weights[1]
+        assert float(weights[1] / weights[0]) > 0.05
+
+    def test_the_median_ignores_one_wild_member(self):
+        values = np.array([10.0, 11.0, 10.5, 400.0])
+        weights = np.ones(4)
+
+        mean = index_module._combine(values, weights, index_module.AGGREGATION_MEAN)
+        median = index_module._combine(values, weights, index_module.AGGREGATION_MEDIAN)
+
+        assert mean > 100
+        assert 10.0 <= median <= 11.0
+
+    def test_equal_weights_reduce_to_the_plain_mean(self):
+        values = np.array([1.0, 2.0, 6.0])
+        weights = np.ones(3)
+
+        assert index_module._combine(
+            values, weights, index_module.AGGREGATION_DISTANCE
+        ) == pytest.approx(3.0)
+
+    def test_infinitely_distant_members_get_no_weight(self):
+        weights = index_module._weights_for(
+            [{"row": 0, "distance": 0.3}, {"row": 1, "distance": float("inf")}],
+            index_module.AGGREGATION_DISTANCE,
+        )
+
+        assert weights[0] > 0
+        assert weights[1] == 0.0
+
+    def test_all_infinitely_distant_members_fall_back_to_equal_weights(self):
+        # The case that crashed the first evaluation run: every member at one
+        # horizon lacked a feature group the query had, so every weight was
+        # zero and np.average divided by zero.
+        weights = index_module._weights_for(
+            [{"row": 0, "distance": float("inf")}, {"row": 1, "distance": float("inf")}],
+            index_module.AGGREGATION_DISTANCE,
+        )
+
+        assert np.all(weights == 1.0)
+        assert index_module._combine(
+            np.array([4.0, 8.0]), weights, index_module.AGGREGATION_DISTANCE
+        ) == pytest.approx(6.0)

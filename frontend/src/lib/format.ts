@@ -71,6 +71,11 @@ export function basinName(code: string | null | undefined): string {
   return BASIN_NAMES[code] ?? code;
 }
 
+export function fmtCelsius(value: number | null | undefined, digits = 1): string {
+  if (value === null || value === undefined) return ABSENT;
+  return `${value.toFixed(digits)} °C`;
+}
+
 export function fmtCoords(lat: number, lon: number): string {
   const ns = lat >= 0 ? "N" : "S";
   const ew = lon >= 0 ? "E" : "W";

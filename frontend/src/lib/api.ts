@@ -14,6 +14,7 @@ import type {
   PageResponse,
   PredictionRun,
   SatelliteAnalysis,
+  SeasonActivity,
   StormDna,
   SystemStatus,
 } from "./types";
@@ -141,6 +142,10 @@ export const api = {
   }) => request<PageResponse<CycloneSummary>>(`/api/v1/cyclones${query(params)}`),
 
   filters: () => request<FilterOptions>("/api/v1/cyclones/filters"),
+
+  /** Season-by-season activity, one row per season and sea. */
+  seasonActivity: (basin?: string) =>
+    request<SeasonActivity[]>(`/api/v1/cyclones/seasons${query({ basin })}`),
 
   cyclone: (id: string) => request<CycloneDetail>(`/api/v1/cyclones/${id}`),
 

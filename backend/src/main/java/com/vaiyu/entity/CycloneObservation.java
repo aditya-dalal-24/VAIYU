@@ -32,6 +32,14 @@ public class CycloneObservation {
     @Column(name = "pressure_hpa")
     private Double pressureHpa;
 
+    /**
+     * Monthly mean SST at this position, NOAA ERSST v5, or null where the
+     * product has no value. Never substituted: the models read the absence
+     * through a presence flag.
+     */
+    @Column(name = "sea_surface_temperature_c")
+    private Double seaSurfaceTemperatureC;
+
     @Column(name = "movement_speed_kph")
     private Double movementSpeedKph;
 
@@ -101,6 +109,14 @@ public class CycloneObservation {
 
     public void setPressureHpa(Double pressureHpa) {
         this.pressureHpa = pressureHpa;
+    }
+
+    public Double getSeaSurfaceTemperatureC() {
+        return seaSurfaceTemperatureC;
+    }
+
+    public void setSeaSurfaceTemperatureC(Double seaSurfaceTemperatureC) {
+        this.seaSurfaceTemperatureC = seaSurfaceTemperatureC;
     }
 
     public Double getMovementSpeedKph() {

@@ -89,11 +89,27 @@ in the archive including those never forecast. The index is rebuilt when the
 stored fix count changes, so a newly ingested season is never silently missing
 from the comparison.
 
+## Seasonal activity
+
+Implemented. `GET /api/v1/cyclones/seasons?basin=NI`.
+
+One row per season and sub-basin: storms that reached 34 kt, their combined
+Accumulated Cyclone Energy, and the strongest storm. Computed in the database
+with a native query, because ACE is a squared sum over fixes and naming the
+strongest storm needs a per-group ordering. The 34 kt floor is written as
+62.9 kph, not 63: 34 kt is 62.968 kph, and a fix reported at exactly 34 kt
+would otherwise fall out of the season it belongs to.
+
 ## Not implemented
 
 - Satellite inference has an architecture, a training pipeline and source
   conditioning, but no checkpoint for the current architecture, so it reports
   `NOT_AVAILABLE` with a reason.
-- Environmental fields (sea-surface temperature, shear, humidity) are accepted
-  by the model interface but no such data is joined to these tracks, so the
-  backend sends none and the models run on track history alone.
+- Humidity and wind shear are accepted by the model interface and joined to
+  nothing, so those features stay flagged absent. Sea-surface temperature *is*
+  joined — NOAA ERSST v5 monthly means, sampled per fix by
+  `ai-service/training/prepare_sst.py`, stored in
+  `cyclone_observations.sea_surface_temperature_c` (V5), and sent by
+  `AiRequestFactory` from the base fix. It is a monthly mean on a 2° grid, so it
+  describes the water mass a storm crossed rather than the water under its
+  core.

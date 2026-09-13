@@ -40,7 +40,6 @@ function SatelliteIntelligence() {
 
   const [storm, setStorm] = useState<CycloneSummary | null>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [imageUrl, setImageUrl] = useState("");
   const [imageType, setImageType] = useState("");
   const [result, setResult] = useState<SatelliteAnalysis | null>(null);
 
@@ -54,14 +53,16 @@ function SatelliteIntelligence() {
       {
         cycloneId: storm.id,
         file: file ?? undefined,
-        imageUrl: imageUrl.trim() || undefined,
         imageType: imageType.trim() || undefined,
       },
       { onSuccess: setResult },
     );
   }
 
-  const canSubmit = Boolean(storm) && (Boolean(file) || imageUrl.trim().length > 0);
+  // Upload only: the backend analyses images it stored itself, because the AI
+  // service fetches the URL from inside the network and an arbitrary URL would
+  // let a caller point it at internal hosts.
+  const canSubmit = Boolean(storm) && Boolean(file);
 
   return (
     <div className="flex h-full min-h-0 gap-2 p-2">
@@ -133,16 +134,6 @@ function SatelliteIntelligence() {
                 accept="image/png,image/jpeg,image/tiff,image/webp"
                 onChange={(event) => setFile(event.target.files?.[0] ?? null)}
                 className="mt-1 w-full cursor-pointer rounded border border-border bg-background px-2 py-1.5 text-xs file:mr-2 file:rounded file:border-0 file:bg-secondary file:px-2 file:py-0.5 file:text-xs file:text-secondary-foreground"
-              />
-            </label>
-
-            <label className="block">
-              <span className="label-xs">…or an image URL</span>
-              <input
-                value={imageUrl}
-                onChange={(event) => setImageUrl(event.target.value)}
-                placeholder="https://…"
-                className="mt-1 w-full rounded border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-input"
               />
             </label>
 

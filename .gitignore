@@ -90,6 +90,8 @@ ai-service/trained_models/
 # absolute output paths for this machine.
 backend/run.log
 ai-service/*.log
+# Scratch inputs and checkpoints for with/without comparisons.
+ai-service/ablation/
 frontend/vaiyu-shot.mjs
 
 # ==================================================

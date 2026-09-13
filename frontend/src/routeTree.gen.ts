@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ExplorerRouteImport } from './routes/explorer'
 import { Route as SatelliteRouteImport } from './routes/satellite'
+import { Route as SeasonsRouteImport } from './routes/seasons'
 import { Route as SystemRouteImport } from './routes/system'
 import { Route as LabIdRouteImport } from './routes/lab.$id'
 import { Route as StormIdRouteImport } from './routes/storm.$id'
@@ -29,6 +30,11 @@ const ExplorerRoute = ExplorerRouteImport.update({
 const SatelliteRoute = SatelliteRouteImport.update({
   id: '/satellite',
   path: '/satellite',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SeasonsRoute = SeasonsRouteImport.update({
+  id: '/seasons',
+  path: '/seasons',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SystemRoute = SystemRouteImport.update({
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/explorer': typeof ExplorerRoute
   '/satellite': typeof SatelliteRoute
+  '/seasons': typeof SeasonsRoute
   '/system': typeof SystemRoute
   '/lab/$id': typeof LabIdRoute
   '/storm/$id': typeof StormIdRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/explorer': typeof ExplorerRoute
   '/satellite': typeof SatelliteRoute
+  '/seasons': typeof SeasonsRoute
   '/system': typeof SystemRoute
   '/lab/$id': typeof LabIdRoute
   '/storm/$id': typeof StormIdRoute
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/explorer': typeof ExplorerRoute
   '/satellite': typeof SatelliteRoute
+  '/seasons': typeof SeasonsRoute
   '/system': typeof SystemRoute
   '/lab/$id': typeof LabIdRoute
   '/storm/$id': typeof StormIdRoute
@@ -75,14 +84,28 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/explorer' | '/satellite' | '/system' | '/lab/$id' | '/storm/$id'
+    | '/'
+    | '/explorer'
+    | '/satellite'
+    | '/seasons'
+    | '/system'
+    | '/lab/$id'
+    | '/storm/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/explorer' | '/satellite' | '/system' | '/lab/$id' | '/storm/$id'
+  to:
+    | '/'
+    | '/explorer'
+    | '/satellite'
+    | '/seasons'
+    | '/system'
+    | '/lab/$id'
+    | '/storm/$id'
   id:
     | '__root__'
     | '/'
     | '/explorer'
     | '/satellite'
+    | '/seasons'
     | '/system'
     | '/lab/$id'
     | '/storm/$id'
@@ -92,6 +115,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ExplorerRoute: typeof ExplorerRoute
   SatelliteRoute: typeof SatelliteRoute
+  SeasonsRoute: typeof SeasonsRoute
   SystemRoute: typeof SystemRoute
   LabIdRoute: typeof LabIdRoute
   StormIdRoute: typeof StormIdRoute
@@ -118,6 +142,13 @@ declare module '@tanstack/react-router' {
       path: '/satellite'
       fullPath: '/satellite'
       preLoaderRoute: typeof SatelliteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/seasons': {
+      id: '/seasons'
+      path: '/seasons'
+      fullPath: '/seasons'
+      preLoaderRoute: typeof SeasonsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/system': {
@@ -148,6 +179,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ExplorerRoute: ExplorerRoute,
   SatelliteRoute: SatelliteRoute,
+  SeasonsRoute: SeasonsRoute,
   SystemRoute: SystemRoute,
   LabIdRoute: LabIdRoute,
   StormIdRoute: StormIdRoute,

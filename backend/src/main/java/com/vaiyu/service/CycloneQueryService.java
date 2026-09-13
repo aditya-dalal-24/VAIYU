@@ -7,6 +7,7 @@ import com.vaiyu.dto.CycloneSummaryDto;
 import com.vaiyu.dto.DataQualityDto;
 import com.vaiyu.dto.ObservationDto;
 import com.vaiyu.dto.PageResponse;
+import com.vaiyu.dto.SeasonActivityDto;
 import com.vaiyu.entity.Cyclone;
 import com.vaiyu.entity.CycloneObservation;
 import com.vaiyu.exception.ResourceNotFoundException;
@@ -108,6 +109,29 @@ public class CycloneQueryService {
 
     /** One selectable sub-basin: which basin it is in, its code and its name. */
     public record SubBasinDto(String basin, String code, String name) {
+    }
+
+    /**
+     * Season-by-season activity for a basin, one row per sea.
+     *
+     * <p>Rounded here rather than in the query so the numbers a reader sees and
+     * the numbers the API returns are the same.
+     */
+    public List<SeasonActivityDto> seasonActivity(String basin) {
+        String basinCode = (basin == null || basin.isBlank()) ? null : basin.trim().toUpperCase();
+        return cyclones.findSeasonActivity(basinCode).stream()
+                .map(row -> new SeasonActivityDto(
+                        row.getSeason(),
+                        row.getSubBasin(),
+                        Basin.subBasinNameOf(row.getSubBasin()),
+                        row.getStorms(),
+                        Math.round(row.getAce() * 10.0) / 10.0,
+                        row.getPeakWindKph() == null
+                                ? null
+                                : Math.round(row.getPeakWindKph() * 10.0) / 10.0,
+                        row.getStrongestStorm(),
+                        row.getStrongestStormId()))
+                .toList();
     }
 
     public Cyclone require(UUID id) {

@@ -28,6 +28,12 @@ export interface Observation {
   longitude: number;
   windSpeedKph: number | null;
   pressureHpa: number | null;
+  /**
+   * Monthly mean SST at this position (NOAA ERSST v5, 2° grid), or null where
+   * the product has no value. It describes the water mass the storm crossed,
+   * not the water under its core, and cannot show a cold wake.
+   */
+  seaSurfaceTemperatureC: number | null;
   movementSpeedKph: number | null;
   movementDirectionDegrees: number | null;
   category: string | null;
@@ -293,6 +299,25 @@ export interface FilterOptions {
   seasons: number[];
   basins: string[];
   subBasins: SubBasinOption[];
+}
+
+/**
+ * One season's activity in one sea.
+ *
+ * `ace` is Accumulated Cyclone Energy in 10^4 kt²: the summed square of the
+ * 1-minute wind over 6-hourly fixes at or above 34 kt. It rewards storms that
+ * were both strong and long-lived, so one severe cyclone can outscore four
+ * weak ones.
+ */
+export interface SeasonActivity {
+  season: number;
+  subBasin: string | null;
+  subBasinName: string | null;
+  storms: number;
+  ace: number;
+  peakWindKph: number | null;
+  strongestStorm: string | null;
+  strongestStormId: string | null;
 }
 
 export interface ApiErrorBody {

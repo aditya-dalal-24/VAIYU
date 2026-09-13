@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { to: "/", label: "Mission Control" },
   { to: "/explorer", label: "Explorer" },
+  { to: "/seasons", label: "Seasons" },
   { to: "/satellite", label: "Satellite" },
   { to: "/system", label: "System" },
 ] as const;
