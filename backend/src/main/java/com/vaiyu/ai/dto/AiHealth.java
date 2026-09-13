@@ -37,11 +37,29 @@ public record AiHealth(
             /* Satellite only: the SENSOR|BAND keys this model was trained on. */
             List<String> sources,
             /* Historical similarity only: how many archive storms are indexed. */
-            Integer analogueStorms
+            Integer analogueStorms,
+            /* Track forecasters: held-out error per horizon, as recorded at training. */
+            List<HorizonEvaluation> evaluation
     ) {
         public boolean trained() {
             return Boolean.TRUE.equals(available) && TRAINED.equals(state);
         }
+    }
+
+    /**
+     * One horizon of a model's recorded held-out evaluation.
+     *
+     * @param spreadErrorCorrelation analogue ensemble only: how well the spread
+     *                               of its members predicts its own error.
+     *                               Null for models that have no spread.
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record HorizonEvaluation(
+            Integer hours,
+            Double meanErrorKm,
+            Double linearBaselineKm,
+            Double spreadErrorCorrelation
+    ) {
     }
 
     public ModelStatus model(String key) {

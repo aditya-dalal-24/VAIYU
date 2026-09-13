@@ -112,9 +112,36 @@ class LoadedModel:
                 ]
             if self.checkpoint.trained_at:
                 payload["trainedAt"] = self.checkpoint.trained_at
+            evaluation = position_evaluation(getattr(self.checkpoint, "metrics", None))
+            if evaluation:
+                payload["evaluation"] = evaluation
         if not self.is_ready:
             payload["reason"] = self.reason
         return payload
+
+
+def position_evaluation(metrics) -> list:
+    """Held-out position error per horizon, beside the straight-line baseline.
+
+    Published so a client can say how a track forecast compares with simple
+    extrapolation from the numbers the checkpoint recorded, instead of a
+    sentence written once and left to go stale after the next retrain. Empty
+    when the checkpoint recorded no position evaluation.
+    """
+    per_horizon = (metrics or {}).get("per_horizon") or {}
+    rows = []
+    for key, scores in per_horizon.items():
+        if "mean_error_km" not in scores or "baseline_linear_km" not in scores:
+            continue
+        row = {
+            "hours": int(str(key).rstrip("h")),
+            "meanErrorKm": scores["mean_error_km"],
+            "linearBaselineKm": scores["baseline_linear_km"],
+        }
+        if "spread_error_correlation" in scores:
+            row["spreadErrorCorrelation"] = scores["spread_error_correlation"]
+        rows.append(row)
+    return sorted(rows, key=lambda r: r["hours"])
 
 
 class ModelRegistry:

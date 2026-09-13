@@ -175,12 +175,23 @@ median and a closeness-weighted mean score 158.0, 157.9 and 158.1 km at +24h
 on the same windows. Its member spread correlates
 with its own error at only 0.23–0.25, so it is a weak uncertainty signal.
 
+Blending it into the neural forecast was measured too, fairly: the same held-out
+moments, an analogue index built from training storms only, the weight chosen on
+validation storms and applied once to the test set, and a confidence interval
+that resamples whole storms (`evaluation/blend_report.py`). The gain is real at
+every horizon and far too small to matter — 0.3 km at +6h, 0.4 km at +12h and
++24h, against best-track positions recorded to about 11 km — so the two are not
+blended.
+
 It stays in the product for the one thing it does that no network does: every
 number it produces is traceable to named storms a reader can go and look at.
 Asked about Mocha in 2023 it returns Mala 2006 — which also crossed the Bay of
 Bengal into Myanmar's Rakhine coast in May — and that is an argument a
 forecaster can check. It is presented as a second opinion, never as the
-forecast, and the console draws it in its own colour for that reason.
+forecast. The console words its comparison with a straight line from the
+evaluation the index recorded, so the claim moves with the next rebuild instead
+of going stale, and its circles are labelled as disagreement between past
+storms, not as an error range.
 
 **Storm DNA** — the one analysis here with no model in it. A storm's whole
 life is reduced to nine measured traits — how long it lasted, how strong and

@@ -171,7 +171,17 @@ export function StormMap({
 
         <FitBounds bounds={bounds} dependency={boundsKey} />
 
-        {/* Error and spread circles sit under the lines so they never hide a track. */}
+        {/*
+          Error and spread circles sit under the lines so they never hide a track.
+
+          The two kinds look alike and mean different things, which the
+          styling and the tooltips have to carry. An amber circle is the
+          model's measured average error at that horizon on held-out storms.
+          A violet circle is how far apart the matched past storms ended up --
+          disagreement, which tracks the analogue forecast's real error only
+          weakly -- so it is drawn fainter and more broken, and never labelled
+          as an error range.
+        */}
         <Pane name="uncertainty" style={{ zIndex: 390 }}>
           {forecast.map((point) =>
             point.uncertaintyRadiusKm ? (
@@ -313,7 +323,11 @@ export function StormMap({
                   {fmtCoords(point.latitude, point.longitude)}
                 </div>
                 <div className="num text-[0.6875rem] text-muted-foreground">
-                  {point.memberCount ?? 0} storms · spread {fmtKm(point.spreadKm)}
+                  {point.memberCount ?? 0} past storms · {fmtKm(point.spreadKm)} apart
+                </div>
+                <div className="max-w-[210px] text-[0.625rem] leading-snug text-muted-foreground">
+                  A second opinion from history. The circle shows how much those storms disagreed,
+                  not how wrong this position is likely to be.
                 </div>
               </div>
             </Tooltip>
@@ -332,9 +346,19 @@ function MapLegend({ hasForecast, hasAnalogue }: { hasForecast: boolean; hasAnal
       <div className="label-xs mb-1.5">Layers</div>
       <div className="space-y-1">
         <LegendRow color={OBSERVED} label="Observed fixes" style="solid" />
-        {hasForecast ? <LegendRow color={MODEL} label="Model forecast" style="dashed" /> : null}
+        {hasForecast ? (
+          <LegendRow
+            color={MODEL}
+            label="Model forecast · circle = measured error"
+            style="dashed"
+          />
+        ) : null}
         {hasAnalogue ? (
-          <LegendRow color={ANALOGUE} label="Analogue ensemble" style="dotted" />
+          <LegendRow
+            color={ANALOGUE}
+            label="Analogues (second opinion) · circle = disagreement"
+            style="dotted"
+          />
         ) : null}
       </div>
     </div>

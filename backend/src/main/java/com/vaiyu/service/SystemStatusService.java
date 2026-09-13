@@ -78,7 +78,8 @@ public class SystemStatusService {
                 status.trainedAt(),
                 status.reason(),
                 status.sources(),
-                status.analogueStorms())));
+                status.analogueStorms(),
+                status.evaluation())));
         return out;
     }
 

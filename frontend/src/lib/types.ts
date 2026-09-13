@@ -201,6 +201,16 @@ export interface SystemModel {
   reason: string | null;
   sources: string[] | null;
   analogueStorms: number | null;
+  /** Held-out track error per horizon, exactly as the checkpoint recorded it. */
+  evaluation: HorizonEvaluation[] | null;
+}
+
+export interface HorizonEvaluation {
+  hours: number;
+  meanErrorKm: number;
+  linearBaselineKm: number;
+  /** Analogue ensemble only: how well member spread predicts its own error. */
+  spreadErrorCorrelation: number | null;
 }
 
 export interface SystemStatus {

@@ -1,5 +1,7 @@
 package com.vaiyu.dto;
 
+import com.vaiyu.ai.dto.AiHealth;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +37,10 @@ public record SystemStatusDto(
      * @param reason   why it is not usable, when it is not
      * @param horizons forecast horizons in hours, where the model has them
      * @param sources  satellite only: sensor keys the model was trained on
+     * @param evaluation track forecasters: held-out error per horizon beside the
+     *                   straight-line baseline, exactly as the checkpoint
+     *                   recorded it, so the interface can describe how a
+     *                   forecast compares without a claim that goes stale
      */
     public record Model(
             boolean available,
@@ -45,7 +51,8 @@ public record SystemStatusDto(
             String trainedAt,
             String reason,
             List<String> sources,
-            Integer analogueStorms
+            Integer analogueStorms,
+            List<AiHealth.HorizonEvaluation> evaluation
     ) {
     }
 

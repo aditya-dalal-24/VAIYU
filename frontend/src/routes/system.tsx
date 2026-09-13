@@ -10,8 +10,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { Empty, Metric, Panel, Skeleton, StatusChip } from "@/components/console/primitives";
-import { fmtDateTime } from "@/lib/format";
+import { fmtDateTime, fmtKm } from "@/lib/format";
 import { useSystemStatus } from "@/lib/queries";
+import { describeMargin } from "@/lib/standing";
 import type { SystemModel } from "@/lib/types";
 import { API_BASE } from "@/lib/api";
 
@@ -31,7 +32,7 @@ const MODEL_LABELS: Record<string, { title: string; purpose: string }> = {
   similarity: {
     title: "Analogue ensemble",
     purpose:
-      "Finds past storms whose previous 24 hours evolved like this one, and aggregates what they did next as a second, independent forecast.",
+      "Finds past storms whose previous 24 hours evolved like this one, and aggregates what they did next as a second opinion. Shown beside the model forecast, not in place of it.",
   },
   satellite: {
     title: "Satellite vision model",
@@ -220,6 +221,34 @@ function ModelRow({ name, model }: { name: string; model: SystemModel }) {
           <Metric label="Archive storms" value={model.analogueStorms.toLocaleString()} />
         ) : null}
       </div>
+
+      {model.evaluation && model.evaluation.length > 0 ? (
+        <div className="mt-2.5 border-t border-border pt-2">
+          <div className="label-xs mb-1">Held-out error against a straight-line projection</div>
+          <table className="w-full max-w-md">
+            <tbody className="num text-[0.6875rem]">
+              {model.evaluation.map((row) => {
+                const margin =
+                  (100 * (row.linearBaselineKm - row.meanErrorKm)) / row.linearBaselineKm;
+                return (
+                  <tr key={row.hours} className="border-b border-border/40">
+                    <td className="py-0.5 pr-3">+{row.hours}h</td>
+                    <td className="py-0.5 pr-3 text-right">{fmtKm(row.meanErrorKm, 1)}</td>
+                    <td className="py-0.5 pr-3 text-right text-muted-foreground">
+                      line {fmtKm(row.linearBaselineKm, 1)}
+                    </td>
+                    <td
+                      className={`py-0.5 text-right ${margin < 0 ? "text-primary" : "text-foreground"}`}
+                    >
+                      {describeMargin(margin)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
 
       {model.reason ? (
         <p className="mt-2 border-t border-border pt-2 text-[0.6875rem] leading-relaxed text-primary/90">

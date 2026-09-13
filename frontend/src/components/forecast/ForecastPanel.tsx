@@ -30,6 +30,8 @@ import {
   stormName,
   titleCase,
 } from "@/lib/format";
+import { useSystemStatus } from "@/lib/queries";
+import { analogueStanding, describeMargin, modelBetterEverywhere } from "@/lib/standing";
 import type { PredictionRun } from "@/lib/types";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -293,6 +295,8 @@ function IntensitySection({ run }: { run: PredictionRun }) {
 
 function AnalogueSection({ run }: { run: PredictionRun }) {
   const { analogues } = run;
+  const status = useSystemStatus();
+  const standing = analogueStanding(status.data);
   return (
     <div className="px-3 py-2.5">
       <SectionHead
@@ -301,7 +305,7 @@ function AnalogueSection({ run }: { run: PredictionRun }) {
         model={analogues.model.name ?? ABSENT}
         confidence={analogues.confidence}
         confidenceLabel="Skill"
-        confidenceHint="Ensemble skill against persistence on held-out storms. A property of the model, not of this forecast."
+        confidenceHint="Skill against persistence (a storm that does not move) on held-out storms. That is a low bar, which is why the comparison with a straight-line projection is shown below. A property of the model, not of this forecast."
         source="analogue"
       />
       {analogues.status !== "COMPLETED" ? (
@@ -311,9 +315,28 @@ function AnalogueSection({ run }: { run: PredictionRun }) {
       ) : (
         <>
           <p className="mt-1.5 text-[0.6875rem] leading-relaxed text-muted-foreground">
-            Storms whose previous 24 hours evolved like this one. Their subsequent tracks form a
-            second forecast, independent of the neural models.
+            Storms whose previous 24 hours evolved like this one, and a second opinion built from
+            what they did next. It uses whole past tracks where the model uses this storm&rsquo;s
+            own motion, which is what makes it worth comparing.
           </p>
+          {standing ? (
+            <div className="mt-2 rounded-sm border border-analogue/30 bg-analogue/5 px-2 py-1.5 text-[0.6875rem] leading-relaxed">
+              <span className="text-muted-foreground">Against a straight-line projection: </span>
+              {standing.horizons.map((h, index) => (
+                <span key={h.hours} className="num">
+                  {index > 0 ? " · " : ""}+{h.hours}h{" "}
+                  <span className={h.vsLinearPct < 0 ? "text-primary" : "text-foreground"}>
+                    {describeMargin(h.vsLinearPct)}
+                  </span>
+                </span>
+              ))}
+              {modelBetterEverywhere(standing) ? (
+                <span className="mt-0.5 block text-muted-foreground">
+                  The model forecast above is more accurate at every horizon.
+                </span>
+              ) : null}
+            </div>
+          ) : null}
           <ul className="mt-2 space-y-1">
             {analogues.matches.map((match) => (
               <li
@@ -354,7 +377,12 @@ function AnalogueSection({ run }: { run: PredictionRun }) {
                 <tr className="text-left">
                   <th className="label-xs pb-1">Ensemble</th>
                   <th className="label-xs pb-1">Position</th>
-                  <th className="label-xs pb-1 text-right">Spread</th>
+                  <th
+                    className="label-xs pb-1 text-right"
+                    title="How far apart the matched storms' tracks ended up. Not a measured error range."
+                  >
+                    Disagreement
+                  </th>
                 </tr>
               </thead>
               <tbody className="num text-xs">
@@ -364,7 +392,11 @@ function AnalogueSection({ run }: { run: PredictionRun }) {
                     <td className="py-1">{fmtCoords(point.latitude, point.longitude)}</td>
                     <td
                       className="py-1 text-right"
-                      title={`${point.memberCount ?? 0} storms; spread is their mean distance from the ensemble mean`}
+                      title={`${point.memberCount ?? 0} storms; their mean distance from the ensemble position. This is disagreement between past storms, not a measured error range${
+                        standing?.spreadErrorCorrelation != null
+                          ? ` — on held-out storms it tracks the actual error only weakly (correlation ${standing.spreadErrorCorrelation.toFixed(2)})`
+                          : ""
+                      }.`}
                     >
                       {fmtKm(point.spreadKm)}
                     </td>

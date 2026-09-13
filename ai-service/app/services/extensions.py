@@ -28,6 +28,8 @@ import time
 from datetime import timedelta, timezone
 from typing import Dict, Optional, Tuple
 
+from registry.registry import position_evaluation
+
 from app.schemas.contract import (
     AnalogueForecastPoint,
     AnalysisStatus,
@@ -104,6 +106,7 @@ def summary(directory: Optional[str] = None) -> Dict[str, object]:
         "horizons": meta.get("horizons"),
         "analogueStorms": index.storm_count,
         "trainedAt": meta.get("built_at"),
+        "evaluation": position_evaluation(meta.get("metrics")),
     }
 
 
