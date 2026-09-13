@@ -150,6 +150,9 @@ class SupervisedSamples:
     trend_mask: np.ndarray           # [n]               1 where a trend label exists
     cyclone_ids: np.ndarray          # [n]
     base_states: np.ndarray          # [n, 4] lat, lon, wind, pressure at T
+    base_times: np.ndarray           # [n]    T itself, so a sample can be matched
+                                     #        to another method's forecast for the
+                                     #        same storm at the same moment
     horizons: List[int]
 
     def __len__(self) -> int:
@@ -170,6 +173,7 @@ class SupervisedSamples:
             trend_mask=self.trend_mask[index],
             cyclone_ids=self.cyclone_ids[index],
             base_states=self.base_states[index],
+            base_times=self.base_times[index],
             horizons=list(self.horizons),
         )
 
@@ -291,6 +295,7 @@ def build_samples(
     trend_masks: List[float] = []
     cyclone_ids: List[str] = []
     base_states: List[List[float]] = []
+    base_times: List[object] = []
 
     for cyclone_id, track in frame.groupby("cyclone_id", sort=False):
         track = track.sort_values("timestamp").reset_index(drop=True)
@@ -383,6 +388,7 @@ def build_samples(
             target_masks.append(horizon_mask)
             intensity_masks.append(horizon_intensity_mask)
             cyclone_ids.append(str(cyclone_id))
+            base_times.append(np.datetime64(current.timestamp, "s"))
             base_states.append(
                 [
                     current.latitude,
@@ -417,6 +423,7 @@ def build_samples(
         trend_mask=np.asarray(trend_masks, dtype=np.float32),
         cyclone_ids=np.asarray(cyclone_ids, dtype=object),
         base_states=np.asarray(base_states, dtype=np.float32),
+        base_times=np.asarray(base_times, dtype="datetime64[s]"),
         horizons=horizons,
     )
 
