@@ -108,3 +108,7 @@ backend/*.log
 
 # Output of scripts/start-local.ps1.
 logs/
+
+# Local AI-assistant skill files, not part of the project.
+.agents/
+skills-lock.json

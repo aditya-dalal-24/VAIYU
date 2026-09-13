@@ -24,7 +24,7 @@ real defect to report, not a setup mistake on your part.
 | --- | --- |
 | A server | Ubuntu 22.04 or 24.04, **4 GB RAM minimum**, 2 vCPU, 30 GB disk. Any provider: DigitalOcean, Hetzner, AWS Lightsail, Azure, a college server. |
 | A domain | Any name you control, e.g. `vaiyu.example.com`. A subdomain is fine. |
-| Your laptop | The trained checkpoints and the observation table, which are not in git. |
+| The release file | `vaiyu-models-and-data.zip` from the repository's Releases page: the trained models and the storm archive, which are not in git. |
 
 4 GB is the real floor: PostgreSQL, the JVM, PyTorch and the Node server run at
 once, and on this development machine processes were killed at around 2 GB free.
@@ -65,21 +65,22 @@ sudo ufw enable
 On the server:
 
 ```bash
-git clone <your-repository-url> vaiyu
+git clone https://github.com/<your-username>/vaiyu.git
 cd vaiyu
-git checkout AdityaDalal
 ```
 
-The models and the archive are not in git. Copy them **from your laptop** — run
-this on the laptop, from the repository root:
+The trained models and the storm archive are not in git. Download
+`vaiyu-models-and-data.zip` from the repository's Releases page and unzip it in
+`~/vaiyu`:
 
 ```bash
-scp -r ai-service/checkpoints            your-user@your-server-ip:~/vaiyu/ai-service/
-scp    ai-service/data/processed/observations.csv \
-                                        your-user@your-server-ip:~/vaiyu/ai-service/data/processed/
+sudo apt-get install -y unzip
+curl -L -o models.zip https://github.com/<your-username>/vaiyu/releases/latest/download/vaiyu-models-and-data.zip
+unzip models.zip
 ```
 
-(`ai-service/data/processed/` may need creating first: `mkdir -p` it on the server.)
+That fills in `ai-service/checkpoints/` and
+`ai-service/data/processed/observations.csv`.
 
 ## 4. Set the secrets
 
@@ -144,7 +145,7 @@ Expect roughly 30 seconds and a reply with `"storms":4450`,
 | See logs | `docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f backend` |
 | Restart | `docker compose -f docker-compose.yml -f docker-compose.prod.yml restart` |
 | Deploy new code | `git pull` then the step 5 command again |
-| New checkpoints | copy them as in step 3, then `... restart ai-service` |
+| New checkpoints | unzip the new release as in step 3, then `... restart ai-service` |
 | Back up the database | `docker exec vaiyu-db pg_dump -U postgres vaiyu > vaiyu-$(date +%F).sql` |
 
 Back up the database before any upgrade. Forecast runs and satellite analyses
@@ -159,5 +160,5 @@ live only there; the archive itself can always be re-ingested.
 | Storm list is empty | Step 6 has not been run, or returned an error. |
 | Ingest returns 401 | The token in the header does not match `.env`. |
 | Ingest returns 403 | `VAIYU_ADMIN_TOKEN` is unset or shorter than 24 characters. |
-| System shows 0 models | `ai-service/checkpoints/` was not copied (step 3). |
+| System shows 0 models | The release zip was not unzipped in `~/vaiyu` (step 3). |
 | Containers restarting repeatedly | The server is out of memory; check with `free -h`. |
