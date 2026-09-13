@@ -104,3 +104,4 @@ frontend/vaiyu-shot.mjs
 !shared/schemas/
 !backend/src/main/resources/db/
 !.gitkeep
+backend/*.log
