@@ -5,19 +5,19 @@
 Copy `backend/.env.example` to `backend/.env` (which is git-ignored) and fill in
 your local values:
 
-- `SERVER_PORT` — the backend's port. `8081` is the documented default, because
+- `SERVER_PORT`: the backend's port. `8081` is the documented default, because
   8080 is so often already taken by something else.
-- `DB_URL` — e.g. `jdbc:postgresql://localhost:5432/vaiyu`
-- `DB_USERNAME`, `DB_PASSWORD` — your local PostgreSQL credentials
-- `AI_SERVICE_URL` — e.g. `http://localhost:8000`
-- `PUBLIC_BASE_URL` — where the backend is reachable **from the AI service**,
+- `DB_URL`: e.g. `jdbc:postgresql://localhost:5432/vaiyu`
+- `DB_USERNAME`, `DB_PASSWORD`: your local PostgreSQL credentials
+- `AI_SERVICE_URL`: e.g. `http://localhost:8000`
+- `PUBLIC_BASE_URL`: where the backend is reachable **from the AI service**,
   because uploaded satellite frames are fetched by URL rather than passed
   inline.
 
 Spring Boot does not read `.env` files on its own, so `BackendApplication.main`
 loads one before the context starts, from `./.env`, `backend/.env` or
 `../backend/.env`, whichever it finds first. That means the file works the same
-way from Maven, from a jar and from an IDE's run button — there is no export
+way from Maven, from a jar and from an IDE's run button; there is no export
 step and nothing to duplicate into a Run/Debug configuration.
 
 A value already present as a real environment variable or system property is

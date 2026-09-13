@@ -107,7 +107,7 @@ would otherwise fall out of the season it belongs to.
   `NOT_AVAILABLE` with a reason.
 - Humidity and wind shear are accepted by the model interface and joined to
   nothing, so those features stay flagged absent. Sea-surface temperature *is*
-  joined — NOAA ERSST v5 monthly means, sampled per fix by
+  joined: NOAA ERSST v5 monthly means, sampled per fix by
   `ai-service/training/prepare_sst.py`, stored in
   `cyclone_observations.sea_surface_temperature_c` (V5), and sent by
   `AiRequestFactory` from the base fix. It is a monthly mean on a 2° grid, so it

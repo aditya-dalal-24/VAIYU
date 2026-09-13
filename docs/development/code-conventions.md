@@ -29,7 +29,7 @@
 
 ## AI Service Conventions
 - **API Routes**: Group related endpoints using FastAPI routers.
-- **Models**: The registry loads `checkpoints/<key>.pt` at startup — that is
+- **Models**: The registry loads `checkpoints/<key>.pt` at startup; that is
   the only directory it reads. `trained_models/` holds a superseded generation
   of artifacts and is ignored by the service; putting new weights there will
   look like training had no effect.

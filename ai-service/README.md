@@ -31,8 +31,8 @@ pip install -r requirements.txt
 python app/main.py            # http://localhost:8000
 ```
 
-- `GET  /api/v1/health` — liveness, which models are loaded, and their state
-- `POST /api/v1/analysis/cyclone` — unified analysis
+- `GET  /api/v1/health`: liveness, which models are loaded, and their state
+- `POST /api/v1/analysis/cyclone`: unified analysis
 
 `HOST` and `PORT` override the bind address (default `0.0.0.0:8000`) and
 `LOG_LEVEL` the logging level.
@@ -67,7 +67,7 @@ python -m venv .venv
 # source .venv/bin/activate && pip install -r requirements.txt   # macOS/Linux
 ```
 
-For a CUDA machine, install the matching torch build first — pip does not pick
+For a CUDA machine, install the matching torch build first; pip does not pick
 it by default:
 
 ```bash
@@ -79,7 +79,7 @@ Checkpoints are saved device-neutral either way.
 
 ### 2. Get the data
 
-**Track data (required — this trains trajectory and intensity).** One file, no
+**Track data (required; this trains trajectory and intensity).** One file, no
 account:
 
 ```bash
@@ -90,25 +90,25 @@ curl -o data/raw/ibtracs.since1980.csv \
 About 137 MB. Note the remote file is `ibtracs.since1980.list.v04r01.csv`; it is
 saved locally under the shorter name the commands below use. For a quick trial
 run, `ibtracs.last3years.list.v04r01.csv` (10 MB) from the same directory works
-too — pass it as `--input` in step 3 — but produces a much weaker model.
+too (pass it as `--input` in step 3), but produces a much weaker model.
 
-**Satellite imagery (optional — only for satellite analysis).** Three sources
+**Satellite imagery (optional; only for satellite analysis).** Three sources
 are anticipated; none is in hand yet:
 
 - *NASA IMPACT / GOES Clean IR* (`ImageFolder`): unpack so the tree is
   `data/processed/satellite/images/{train,validation,test}/{cyclone,non_cyclone}/*.jpg`.
   Frames must be named `{storm}_{n}.jpg` so the storm identity survives.
 - *HURSAT-style*: a `.npy` label array beside a directory of frames. The array
-  in `data/raw/Cyclone_Labels h5.npy` has this shape — 21,076 frames, 485
-  storms, **Atlantic, East Pacific and West Pacific only, no North Indian** — but
+  in `data/raw/Cyclone_Labels h5.npy` has this shape (21,076 frames, 485
+  storms, **Atlantic, East Pacific and West Pacific only, no North Indian**), but
   its image frames are not in the repo.
 - *INSAT-3D/3DR via MOSDAC*: the account is active, but the reader is written
   only once a sample file has been checked; see `HANDOFF.md` sections 5 and 10.
 
-**Sea-surface temperature (optional — adds environmental context).** Downloaded
+**Sea-surface temperature (optional; adds environmental context).** Downloaded
 by the preparation step itself in step 3; no account needed, about 94 MB of NOAA
 ERSST v5 monthly files cached under `data/raw/ersst/`. Humidity and wind shear
-remain unjoined — see *Known gaps*.
+remain unjoined; see *Known gaps*.
 
 ### 3. Prepare
 
@@ -163,8 +163,8 @@ silently training slowly.
 UNKNOWN on a fraction of training frames (`--source-dropout`, default `0.2`).
 That trains the embedding slot used for images whose sensor the model cannot
 identify; without it, that slot would stay at its random starting value. After
-training, the held-out split is scored twice — once with the real sources, and
-once with every source withheld — and both results are stored in the
+training, the held-out split is scored twice, once with the real sources and
+once with every source withheld, and both results are stored in the
 checkpoint's metrics as `test` and `test_source_withheld`.
 
 **Pressure dropout.** The track and intensity trainers withhold pressure on 15%
@@ -178,7 +178,7 @@ is needed between training and serving.
 
 ### 5. Verify
 
-In this order — each step checks something the previous one cannot.
+In this order, because each step checks something the previous one cannot.
 
 ```bash
 python -m pytest                                    # 1. nothing regressed
@@ -191,14 +191,14 @@ python evaluation/live_check.py --source ibtracs --storm <NAME>   # 4. end to en
 
 Step 3 is the measurement: mean position error per horizon on cyclones the model
 never saw, against persistence and linear-extrapolation baselines. **Beating
-linear extrapolation is the result that matters** — beating persistence only
+linear extrapolation is the result that matters**; beating persistence only
 means the model knows storms move.
 
 Step 4 forecasts a real current storm from a truncated track and scores it
 against the fixes that were withheld. It refuses to score a storm that appears
 in the training archive, because that produces excellent and meaningless
 numbers. It also says how many of the storm's fixes have no coded nature
-(`NR`) — the list shows them as `(N uncoded)` — because training used coded
+(`NR`, shown in the list as `(N uncoded)`), because training used coded
 tropical fixes only.
 
 ### 6. Hand the checkpoints back
@@ -213,7 +213,7 @@ checkpoints/analogue_index.npz    # and analogue_index.json beside it
 ```
 
 Drop them into `checkpoints/` on the serving machine and restart. Nothing else
-transfers — the fitted scaler, architecture config, horizons, source vocabulary
+transfers: the fitted scaler, architecture config, horizons, source vocabulary
 and evaluation metrics all travel inside the checkpoint file. Checkpoints trained
 under Python 3.13 have been served under 3.11 without change.
 
@@ -302,8 +302,8 @@ No contract change is involved: `imageType` was already a free string.
 These are real and stated rather than papered over.
 
 **Four of the six environmental features are still inert.** Sea-surface
-temperature is now joined — NOAA ERSST v5 monthly means, sampled per fix by
-`training/prepare_sst.py` — and travels the whole way: the backend reads it from
+temperature is now joined (NOAA ERSST v5 monthly means, sampled per fix by
+`training/prepare_sst.py`) and travels the whole way: the backend reads it from
 the base fix, sends it in `environmentalData`, and the feature layer pairs it
 with its presence flag. Humidity and wind shear are not joined, so those four
 features (value and flag each) still carry no information, the scaler records
@@ -324,7 +324,7 @@ active; the next step is one sample file (see `HANDOFF.md`).
 
 **When nothing can run, the backend loses the reasons.** With no model able to
 answer (for example, a fresh clone), the service returns HTTP 503 with the full
-analysis body, each block `NOT_AVAILABLE` with a reason — as contract section 14
+analysis body, each block `NOT_AVAILABLE` with a reason, as contract section 14
 specifies. The Spring client on branch `Ab4J` turns every non-2xx reply into an
 empty result, so those reasons never reach the backend. The fix belongs in the
 backend, not here: in `AiServiceClient`, on a 503, read the body with
@@ -334,8 +334,8 @@ backend, not here: in `AiServiceClient`, on a 503, read the body with
 TS`); the live IBTrACS path also admits `NR` (nature not yet coded), because
 provisional current-season tracks are largely uncoded. This is deliberate and
 measured (see `TROPICAL_NATURES` in `preprocessing/ibtracs_live.py`), and
-`live_check.py` reports the count. Some live storms are entirely uncoded — every
-fix of KROVANH is — so treat live results on them accordingly.
+`live_check.py` reports the count. Some live storms are entirely uncoded (every
+fix of KROVANH is), so treat live results on them accordingly.
 
 **No real-time North Indian Ocean feed.** JTWC returns 403, IMD is unreachable,
 and Bhuvan carries no cyclone data. The IBTrACS active list covers every basin

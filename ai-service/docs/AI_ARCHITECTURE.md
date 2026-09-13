@@ -1,13 +1,13 @@
-# VAIYU AI Service — Architecture
+# VAIYU AI Service: Architecture
 
 The authoritative specification is `VAIYU AI Service Contract.txt` in the
 service root. Where this document and the contract disagree, the contract wins.
 
 Status of every component is marked:
 
-- **IMPLEMENTED NOW** — code exists, is tested, and runs
-- **TRAINING REQUIRED LATER** — code exists but needs the real dataset
-- **FUTURE EXTENSION** — interface only, deliberately produces no output
+- **IMPLEMENTED NOW**: code exists, is tested, and runs
+- **TRAINING REQUIRED LATER**: code exists but needs the real dataset
+- **FUTURE EXTENSION**: interface only, deliberately produces no output
 
 ---
 
@@ -93,8 +93,8 @@ ai-service/
 by one output head per forecast horizon.
 
 The input is 3 to 8 steps of a 16-dimensional vector. That size rules out a
-Transformer — self-attention needs far more data than a cyclone archive
-provides before it beats a recurrent baseline — and it rules out flattening
+Transformer (self-attention needs far more data than a cyclone archive
+provides before it beats a recurrent baseline), and it rules out flattening
 into an MLP, which discards the ordering that makes a track informative. A one
 or two layer GRU is the smallest architecture that respects the temporal
 structure, and it trains on CPU.
@@ -102,7 +102,7 @@ structure, and it trains on CPU.
 **Direct multi-horizon heads**, not recursive rollout. Each horizon is
 predicted from the encoded state independently, so a 24-hour error is not the
 accumulation of four 6-hour errors, and each horizon can learn its own
-behaviour — a 6-hour track is close to ballistic, a 24-hour one is not.
+behaviour: a 6-hour track is close to ballistic, a 24-hour one is not.
 
 **Targets are displacements**, not absolute coordinates. Deltas centre near
 zero and transfer between basins; absolute latitude and longitude would make
@@ -131,8 +131,8 @@ cross-entropy loss, not a threshold applied to the regression output.
 **Trend classes.** `WEAKENING`, `STABLE`, `INTENSIFYING` are trained.
 `UNCERTAIN` is **not** a learned class: it is reported when the classifier's
 maximum probability falls below `DEFAULT_TREND_CONFIDENCE_FLOOR` (0.45). That
-gives the contract's fourth value an honest meaning — the model declining to
-commit — rather than asking it to learn a label no dataset marks.
+gives the contract's fourth value an honest meaning (the model declining to
+commit) rather than asking it to learn a label no dataset marks.
 
 The combined loss is `regression + trend_loss_weight * classification`, with
 `trend_loss_weight` configurable.
@@ -143,7 +143,7 @@ The combined loss is `regression + trend_loss_weight * classification`, with
 **Architecture.** A pretrained ResNet-18 over the frame, conditioned on which
 sensor produced it, with a single detection head.
 
-**Why pretrained and mostly frozen.** Cyclone imagery archives are small — the
+**Why pretrained and mostly frozen.** Cyclone imagery archives are small: the
 NASA IMPACT reference set is a few hundred frames from sixteen storms. Training
 a convolutional network from scratch on that memorises it. ImageNet features
 transfer because the early layers learn edges, texture and radial structure,
@@ -154,8 +154,8 @@ Only the trailing residual block and the head are fine-tuned.
 they are not interchangeable: brightness in a GOES 10.7 µm clean-IR frame is
 cloud-top temperature, while brightness in a visible-band frame is reflected
 sunlight. Without knowing which it is looking at, the model must average over
-that difference and fits neither. A small embedding of the source key —
-`SENSOR|BAND` — is concatenated with the visual features so it can learn a
+that difference and fits neither. A small embedding of the source key
+(`SENSOR|BAND`) is concatenated with the visual features so it can learn a
 per-sensor offset.
 
 **Unknown sources are handled, not hidden.** Embedding index 0 is reserved for
@@ -187,7 +187,7 @@ centre coordinates stay null. No label in the reference dataset supports them,
 and section 8 keeps them optional until a model actually produces them.
 
 **What a positive answer means.** In the reference dataset `is_cyclone` marks a
-34-knot threshold — every frame contains *some* system, and the negatives are
+34-knot threshold: every frame contains *some* system, and the negatives are
 15–33 kt depressions. So the model answers "at or above tropical-storm
 strength", not "is there a storm here". That definition is stored in the
 checkpoint and returned in the response `reason`, so a UI cannot present an
@@ -205,7 +205,7 @@ are near-duplicates, so splitting on images would put the same storm on both
 sides.
 
 The **source vocabulary is built from the training split only**, so a sensor
-appearing solely in test maps to UNKNOWN exactly as it would at serve time —
+appearing solely in test maps to UNKNOWN exactly as it would at serve time;
 otherwise the test score would flatter the model.
 
 ### Evaluation
@@ -217,7 +217,7 @@ one easy storm, and a model that works on one sensor and fails on another.
 
 Augmentation is rotation and translation only. A horizontal flip mirrors the
 spiral's chirality, turning a Northern Hemisphere storm into one rotating the
-wrong way — an image no sensor would record.
+wrong way, an image no sensor would record.
 
 ---
 
@@ -229,9 +229,9 @@ Twenty per step (feature set **1.1**), in the fixed order defined by
 | Feature | Notes |
 |---|---|
 | `latitude`, `abs_latitude` | degrees |
-| `longitude_sin`, `longitude_cos` | circular encoding — 179° and −179° are adjacent |
-| `wind_speed_kph` | contract units; **required** — fixes without it are dropped, as in training |
-| `pressure_hpa` | real value, or a neutral 1010 hPa when absent — never 0 |
+| `longitude_sin`, `longitude_cos` | circular encoding: 179° and −179° are adjacent |
+| `wind_speed_kph` | contract units; **required**; fixes without it are dropped, as in training |
+| `pressure_hpa` | real value, or a neutral 1010 hPa when absent, never 0 |
 | `movement_speed_kph` | reported, or derived from the previous fix |
 | `heading_sin`, `heading_cos` | circular encoding of movement direction |
 | `delta_hours` | gap since the previous fix; 0 marks the first step |
@@ -245,21 +245,21 @@ Twenty per step (feature set **1.1**), in the fixed order defined by
 Six environmental features, each **paired with a presence flag**:
 `seaSurfaceTemperatureC`, `humidityPercent`, `windShearKph`. The contract makes
 these optional, so a missing value is filled with a neutral default *and*
-flagged as absent — the model can then distinguish "missing" from "genuinely
+flagged as absent, so the model can then distinguish "missing" from "genuinely
 this value", which silent imputation would hide.
 
 **Where the pressure-less fixes come from.** Until the archive was rebuilt, the
 IBTrACS adapter required a central pressure on every fix, so the flag was
 exercised only by the synthetic dropout below. Dropping that requirement added
-18,472 fixes and 476 whole storms — the North Indian Ocean gained 41, a fifth of
+18,472 fixes and 476 whole storms; the North Indian Ocean gained 41, a fifth of
 what it had, because two thirds of its wind-bearing fixes report no pressure.
 Those fixes now train the trajectory model and the wind head, while the
 intensity loss and its metrics mask the pressure component per fix, so an
 absent reading contributes nothing rather than being learned as "no change".
 
 **Why 1.1 exists.** Feature set 1.0 had a real bug: pressure is optional in the
-contract, and a missing value entered the model as 0 hPa — far outside anything
-in training — so a trajectory request without pressure returned `COMPLETED` with
+contract, and a missing value entered the model as 0 hPa (far outside anything
+in training), so a trajectory request without pressure returned `COMPLETED` with
 a forecast heading the wrong way. Wind had the same silent-zero path. 1.1 flags
 pressure instead, and **training withholds pressure on 15% of samples**
 (`pressure_dropout`) so the flag is learned; without that it would be constant
@@ -280,7 +280,7 @@ nonsense.
 
 **Relation to the XGBoost intensity model on branch `arpitsecond`.** That model
 uses 14 single-time-step features. Every one is represented here: `lat`, `lon`
-(circular), wind (kph rather than kt — a linear rescale the scaler absorbs),
+(circular), wind (kph rather than kt, a linear rescale the scaler absorbs),
 pressure, `pressure_available` (`pressure_present`), translation speed and
 heading (circular), `coriolis_param`, the 6-hour wind/lat/lon changes (per-step
 deltas; with synoptic fixes the step is 6 h), `lag_6h_available` (`delta_hours`
@@ -301,7 +301,7 @@ One row per cyclone observation, CSV or Parquet.
 
 | Column | Unit | Required |
 |---|---|---|
-| `cyclone_id` | — | yes — groups rows into tracks |
+| `cyclone_id` | n/a | yes; groups rows into tracks |
 | `timestamp` | ISO-8601 UTC | yes |
 | `latitude` | decimal degrees, −90..90 | yes |
 | `longitude` | decimal degrees, −180..180 | yes |
@@ -309,7 +309,7 @@ One row per cyclone observation, CSV or Parquet.
 | `pressure_hpa` | hPa | for intensity targets |
 | `movement_speed_kph` | kph | optional |
 | `movement_direction_degrees` | degrees clockwise from north | optional |
-| `season` | year | optional — enables the chronological split |
+| `season` | year | optional; enables the chronological split |
 | `sea_surface_temperature_c` | °C | optional |
 | `humidity_percent` | % | optional |
 | `wind_shear_kph` | kph | optional |
@@ -348,13 +348,13 @@ encode differently depending on how much padding surrounded it.
 ## 8. Temporal leakage prevention
 
 Two failures would make every number in this project meaningless, and neither
-surfaces as an error — both simply produce a model that scores well and is
+surfaces as an error: both simply produce a model that scores well and is
 wrong. Each has its own defence.
 
 **Future data in an input.** A prediction at time T may only use observations at
 or before T. Sample construction slices `observations[:index + 1]`, and the
 inference path filters the request's history through `observations_up_to()`
-before building a sequence — so even a caller that mistakenly includes a later
+before building a sequence, so even a caller that mistakenly includes a later
 fix cannot leak it into the prediction.
 
 **The same cyclone on both sides of a split.** Consecutive fixes of one storm
@@ -412,11 +412,11 @@ Useful flags: `--epochs`, `--batch-size`, `--learning-rate`, `--hidden-size`,
 `TrainingConfig` can be supplied as JSON with `--config`.
 
 The loop uses AdamW, gradient clipping, and early stopping on validation loss,
-and restores the best epoch's weights before saving — not the last epoch's.
+and restores the best epoch's weights before saving, not the last epoch's.
 
 Loss is **masked smooth L1**. Horizons without a real target contribute nothing.
 Smooth L1 rather than MSE because track and intensity data contain genuine
-outliers — rapid intensification, sharp recurvature — that a squared loss would
+outliers (rapid intensification, sharp recurvature) that a squared loss would
 let dominate the gradient.
 
 Reproducibility: `set_seed()` seeds Python, NumPy and torch. Bit-for-bit
@@ -468,8 +468,8 @@ otherwise be invisible.
 To avoid it entirely, train from the same commit you serve from.
 
 **Reproducibility.** `--seed` covers Python, NumPy and torch. Bit-for-bit
-determinism across different hardware is not guaranteed — a CUDA run and a CPU
-run will differ slightly — so compare runs on the same device.
+determinism across different hardware is not guaranteed (a CUDA run and a CPU
+run will differ slightly), so compare runs on the same device.
 
 ---
 
@@ -478,18 +478,18 @@ run will differ slightly — so compare runs on the same device.
 Run automatically at the end of training on the held-out split, and available
 directly from `evaluation/`.
 
-**Trajectory** — great-circle error in kilometres, not degrees. A degree of
+**Trajectory**: great-circle error in kilometres, not degrees. A degree of
 longitude is ~111 km at the equator and ~55 km at 60° latitude, so a
 degree-space error would understate mistakes at high latitude and make basins
 incomparable. Mean, median and p90 per horizon, against two baselines:
 
-- `persistence` — the storm does not move
-- `linear` — the last observed motion continues
+- `persistence`: the storm does not move
+- `linear`: the last observed motion continues
 
 Beating persistence is a low bar. Beating linear extrapolation is what indicates
 the model learned how tracks curve.
 
-**Intensity** — MAE for wind and pressure per horizon against a persistence
+**Intensity**: MAE for wind and pressure per horizon against a persistence
 baseline, plus trend accuracy, macro F1, class distribution and a confusion
 matrix. Macro F1 and the majority-class baseline are both reported because
 accuracy alone hides the usual failure: a model that answers `STABLE` for
@@ -504,8 +504,8 @@ everything because `STABLE` is the commonest class.
 Held-out evaluation answers "how does the model do across many storms".
 `evaluation/live_check.py` answers a narrower, complementary question: does the
 *deployed service*, on one specific real storm, produce a forecast matching what
-that storm then did. It exercises the whole path — fetch, feature construction,
-scaling, checkpoint load, inference, response shape — against ground truth the
+that storm then did. It exercises the whole path (fetch, feature construction,
+scaling, checkpoint load, inference, response shape) against ground truth the
 model was never given.
 
 ```
@@ -531,7 +531,7 @@ Two properties make it a test rather than a demonstration:
 That second guard exists because it was needed: an early live check reported
 strong errors on a storm that turned out to be in the training split, and the
 numbers had to be retracted. The check is deliberately biased toward false
-positives — a warning on a clean storm costs a second look, a miss invalidates
+positives: a warning on a clean storm costs a second look, a miss invalidates
 the whole result.
 
 Every position error is printed against two baselines -- persistence (the storm
@@ -554,7 +554,7 @@ these are plumbing checks.
 
 ---
 
-## 10c. Live track sources — what is actually reachable
+## 10c. Live track sources: what is actually reachable
 
 `preprocessing/atcf.py` parses the ATCF b-deck format, which every operational
 centre publishes best tracks in. The format is identical across basins, so the
@@ -615,7 +615,7 @@ path and geoid conversion. Its access token also expires daily, so it could not
 back an unattended pipeline even if the data existed. **MOSDAC** is the ISRO
 service that does hold relevant products ("Sat. Based Cyclone Obser. and
 Realtime Pred. over IO", plus INSAT-3D imagery), but it requires a registered
-account — that credential has to come from the project owner.
+account, and that credential has to come from the project owner.
 
 ### On `tropycal`
 
@@ -623,7 +623,7 @@ account — that credential has to come from the project owner.
 against the direct parser. It is **not a dependency**, for three measured
 reasons:
 
-- Its one differentiator over NHC — a JTWC path covering the Indian Ocean — also
+- Its one differentiator over NHC, a JTWC path covering the Indian Ocean, also
   returns **403** from here, so it adds no basin coverage.
 - It cannot import without `cartopy`, pulling in `pyproj` and `shapely`, and
   takes ~40 s to initialise its dataset object.
@@ -632,7 +632,7 @@ reasons:
 That is a large plotting-and-analysis stack, and a 40 s startup, to duplicate a
 ~60-line parser. If it is ever wanted for exploratory analysis or figures, it
 belongs in a separate data-prep requirements file, not in the service's
-`requirements.txt` — the service must stay deployable without a geospatial
+`requirements.txt`; the service must stay deployable without a geospatial
 toolchain.
 
 ---
@@ -729,7 +729,7 @@ independent second forecast of the locked differentiator C.
 
 A checkpoint contains weights, the architecture config, the fitted scaler, the
 feature-set version, the horizons, and the metrics from its own evaluation.
-Weights alone would be useless — a model served with a different scaler or
+Weights alone would be useless: a model served with a different scaler or
 feature layout produces confident nonsense.
 
 Saves are atomic (written to a temporary file, then moved), so an interrupted
@@ -751,7 +751,7 @@ filesystem paths, exception text or stack traces (section 13).
 
 A checkpoint whose `feature_set_version` does not match the running service is
 **rejected**. Tensor shapes would still line up, so nothing would fail at
-runtime — the model would simply return confident, wrong numbers.
+runtime; the model would simply return confident, wrong numbers.
 
 ---
 
@@ -773,10 +773,10 @@ POST /api/v1/analysis/cyclone
 **Confidence** is not defined by the contract, so each analysis uses one stated
 definition:
 
-- **trajectory** — the validation skill recorded in the checkpoint at training
+- **trajectory**: the validation skill recorded in the checkpoint at training
   time, against a no-change baseline. A property of the model, not the request.
   Omitted entirely when the checkpoint has no such metric; never synthesised.
-- **intensity** — the trend classifier's own probability for the class it chose,
+- **intensity**: the trend classifier's own probability for the class it chose,
   a genuine per-request quantity.
 
 ---
@@ -806,7 +806,7 @@ the others untouched.
 
 **Historical similarity** (section 11) may eventually return
 `historicalCycloneId`, `similarityScore`, `rank` and `similarityBasis`. FastAPI
-returns identifiers and scores only — Spring Boot enriches the historical record
+returns identifiers and scores only; Spring Boot enriches the historical record
 from the application database.
 
 **Explainability** (section 12) must be derived from model output or feature
@@ -846,13 +846,13 @@ forward passes, checkpoint round-trips and rejection of corrupt or mismatched
 files, every registry state, partial analysis, temporal safety, split leakage,
 and one end-to-end run from synthetic data through training to a served
 prediction. ATCF parsing is covered too, including the two traps that would
-corrupt features silently — each fix repeating once per wind-radii threshold,
-and a missing pressure encoded as `0` rather than blank — along with the
+corrupt features silently (each fix repeating once per wind-radii threshold,
+and a missing pressure encoded as `0` rather than blank), along with the
 live-check guards: that the withheld part of a track never reaches the request,
 and that a storm present in the training archive is detected.
 
 That end-to-end test is what makes "training-ready" verifiable rather than
-asserted. It uses synthetic data and two epochs, and asserts only plumbing —
+asserted. It uses synthetic data and two epochs, and asserts only plumbing:
 does a checkpoint appear, does it load, does the service move from
 `NOT_AVAILABLE` to `COMPLETED`. **No test claims scientific accuracy**, and none
 can: no model has been trained.

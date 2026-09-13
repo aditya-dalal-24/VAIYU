@@ -12,7 +12,7 @@ npm run build
 
 `VITE_API_BASE_URL` points at Spring Boot; it defaults to
 `http://localhost:8081`. There is no other backend. The browser never calls the
-Python AI service — every call goes through `src/lib/api.ts`, which is the one
+Python AI service; every call goes through `src/lib/api.ts`, which is the one
 place a request to the outside is made.
 
 ## Stack
@@ -23,7 +23,7 @@ react-leaflet, Recharts, Tailwind v4.
 TypeScript runs with `exactOptionalPropertyTypes` and `noUncheckedIndexedAccess`
 on. Both are deliberate and both are inconvenient: the first stops `undefined`
 being passed where a field means "absent", and the second forces every array
-index to be treated as possibly missing — which is the right default in a
+index to be treated as possibly missing, which is the right default in a
 codebase whose whole subject is gappy observational data.
 
 ## The rules this interface is built on
@@ -36,20 +36,20 @@ in `src/styles.css` and used for nothing else:
 | `--observed` (blue)   | a fix that was actually recorded                 |
 | `--model` (amber)     | output of a trained model                        |
 | `--analogue` (violet) | an aggregate of similar past storms              |
-| `--absent` (grey)     | no data — never filled in with a plausible value |
+| `--absent` (grey)     | no data, never filled in with a plausible value |
 
 A reader who learns three colours can tell measurement from prediction at a
 glance, which is the distinction the whole product turns on.
 
-**Absent is rendered, not hidden.** `ABSENT = "—"` in `src/lib/format.ts` is what
+**Absent is rendered, not hidden.** `ABSENT` in `src/lib/format.ts` (an em dash character) is what
 a missing number looks like. Do not substitute a zero, a dash-free blank, a
 last-known value, or an interpolation. Uncertainty circles on the map are drawn
 only when the model actually returned a radius.
 
 **An empty state is not an error state.** A storm with no forecast yet is the
 normal case: the backend answers 204 and the panel invites you to run the
-models. Only a genuine failure — 422 "this storm's data cannot support a
-forecast", 503 "the model is not loaded", or an unreachable backend — is drawn
+models. Only a genuine failure (422 "this storm's data cannot support a
+forecast", 503 "the model is not loaded", or an unreachable backend) is drawn
 as a problem, and each says which of the three it is.
 
 ## Layout

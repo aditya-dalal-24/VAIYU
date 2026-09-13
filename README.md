@@ -2,7 +2,7 @@
 
 # 🌀 VAIYU
 
-### Tropical cyclone intelligence — forecasts you can check
+### Tropical cyclone intelligence: forecasts you can check
 
 Neural-network track and intensity forecasts, 46 years of storm history,<br>
 and a lab that scores every prediction against what actually happened.
@@ -29,10 +29,10 @@ and a lab that scores every prediction against what actually happened.
 
 <br>
 
-![Mission Control: Cyclone Mocha, 2023, with the model forecast and historical analogues](docs/images/mission-control.png)
+![Mission Control: Cyclone Biparjoy, 2023, with the model forecast and historical analogues](docs/images/mission-control.png)
 
 > **Nothing on screen is invented.** A measured value, a model output and a
-> missing value are each drawn differently — a missing one appears as `—`, never
+> missing value are each drawn differently, and a missing one appears as a dash, never
 > as a plausible guess. When a capability isn't available, VAIYU says so and
 > explains why.
 
@@ -40,24 +40,24 @@ and a lab that scores every prediction against what actually happened.
 
 ## What it does
 
-- 🎯 **Track & intensity forecasts** — +6, +12 and +24 hour predictions from GRU
+- 🎯 **Track & intensity forecasts**: +6, +12 and +24 hour predictions from GRU
   neural networks, each drawn with its measured error.
-- 🧪 **Prediction Lab** — rewind any storm, forecast from what was knowable then,
+- 🧪 **Prediction Lab**: rewind any storm, forecast from what was knowable then,
   reveal what really happened, and score the result against simple baselines.
-- 🕰️ **Historical analogues** — the past storms whose last 24 hours looked most
+- 🕰️ **Historical analogues**: the past storms whose last 24 hours looked most
   like this one, as a second opinion beside the model.
-- 🧬 **Storm DNA** — a storm's whole life reduced to nine measured traits and
+- 🧬 **Storm DNA**: a storm's whole life reduced to nine measured traits and
   compared against all 4,450 storms in the archive.
-- 📊 **Seasons** — storm counts and Accumulated Cyclone Energy year by year, with
+- 📊 **Seasons**: storm counts and Accumulated Cyclone Energy year by year, with
   the North Indian Ocean split into the **Arabian Sea** and **Bay of Bengal**.
-- 🗺️ **Explorer** — every storm from 1980 to 2026, searchable by name, basin, sea
+- 🗺️ **Explorer**: every storm from 1980 to 2026, searchable by name, basin, sea
   and season.
 
 | Prediction Lab | Seasons |
 | --- | --- |
-| ![Prediction Lab scoring a Mocha forecast against what happened](docs/images/prediction-lab.png) | ![Seasons: Arabian Sea and Bay of Bengal activity since 1980](docs/images/seasons.png) |
+| ![Prediction Lab scoring a Biparjoy forecast against what happened](docs/images/prediction-lab.png) | ![Seasons: Arabian Sea and Bay of Bengal activity since 1980](docs/images/seasons.png) |
 
-![Storm DNA: Mocha compared with the closest lives in the archive](docs/images/storm-dna.png)
+![Storm DNA: Biparjoy compared with the closest lives in the archive](docs/images/storm-dna.png)
 
 ---
 
@@ -81,8 +81,8 @@ is what shows a model has learned how storms actually turn.
 | Trend (weakening / stable / intensifying) | **68.0%** | 42.1% |
 
 The track model beats a straight line in all six ocean basins at +24 h, by 6–18%.
-The full evaluation — per basin, with pressure withheld, the analogue ensemble,
-what did *not* help and why — is in
+The full evaluation (per basin, with pressure withheld, the analogue ensemble,
+what did *not* help and why) is in
 **[docs/data-and-models.md](docs/data-and-models.md)**.
 
 ---
@@ -91,7 +91,7 @@ what did *not* help and why — is in
 
 ```text
 React console (TanStack Start, Leaflet, Recharts)            :5173
-        │  REST — the only network calls the browser makes
+        │  REST: the only network calls the browser makes
         ▼
 Spring Boot 3.2 · Java 17                                    :8081
         │                          │
@@ -139,12 +139,12 @@ The schema is created automatically by Flyway the first time the backend starts.
 
 These are not stored in git. Choose one:
 
-**Download them** (fast) — from this repository's
+**Download them** (fast): from this repository's
 [Releases](https://github.com/aditya-dalal-24/VAIYU/releases), download `vaiyu-models-and-data.zip` and unzip it at
 the repository root. It fills in `ai-service/checkpoints/` and
 `ai-service/data/processed/observations.csv`.
 
-**Or build them yourself** (about an hour on a CPU) — follow *Training from
+**Or build them yourself** (about an hour on a CPU): follow *Training from
 scratch* in [`ai-service/README.md`](ai-service/README.md). It downloads the
 IBTrACS archive and the NOAA sea-surface temperature data, prepares the
 observation table and trains all three models.
@@ -185,13 +185,13 @@ after changing code, start again with `-Rebuild`. The whole stack uses about
 **On macOS or Linux**, run each service in its own terminal:
 
 ```bash
-# 1 — AI service
+# 1: AI service
 cd ai-service && .venv/bin/python -m uvicorn app.main:app --port 8000
 
-# 2 — backend (reads backend/.env)
+# 2: backend (reads backend/.env)
 cd backend && mvn spring-boot:run
 
-# 3 — console
+# 3: console
 cd frontend && npm run dev
 
 # then, once, load the archive
@@ -246,15 +246,15 @@ never again silently delete a whole basin's history.
 
 ## Data sources
 
-- **Storm tracks** — IBTrACS v04r01, NOAA National Centers for Environmental
+- **Storm tracks**: IBTrACS v04r01, NOAA National Centers for Environmental
   Information. Knapp, K. R., M. C. Kruk, D. H. Levinson, H. J. Diamond, and
   C. J. Neumann (2010): *The International Best Track Archive for Climate
   Stewardship (IBTrACS)*. Bulletin of the American Meteorological Society, 91,
   363–376.
-- **Sea-surface temperature** — NOAA Extended Reconstructed SST, version 5.
+- **Sea-surface temperature**: NOAA Extended Reconstructed SST, version 5.
   Huang, B., et al. (2017): *Extended Reconstructed Sea Surface Temperature,
   Version 5 (ERSSTv5)*. Journal of Climate, 30, 8179–8205.
-- **Basemap** — Esri, HERE, Garmin, © OpenStreetMap contributors.
+- **Basemap**: Esri, HERE, Garmin, © OpenStreetMap contributors.
 
 Model forecasts shown in VAIYU are research output, not official forecasts from
 any meteorological agency.
@@ -263,5 +263,5 @@ any meteorological agency.
 
 ## License
 
-Released under the [MIT License](LICENSE) — free to use, modify and share, as long
+Released under the [MIT License](LICENSE): free to use, modify and share, as long
 as the copyright notice is kept.

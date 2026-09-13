@@ -100,7 +100,7 @@ VAIYU_DB_PASSWORD=<first random value>
 VAIYU_ADMIN_TOKEN=<second random value>
 ```
 
-Keep the admin token somewhere safe — it is what lets you load or reload the
+Keep the admin token somewhere safe. It is what lets you load or reload the
 archive. If any of the three is missing, the next step refuses to start and
 names the one that is missing.
 
@@ -131,7 +131,7 @@ Expect roughly 30 seconds and a reply with `"storms":4450`,
 
 ## 7. Check it
 
-- Open `https://vaiyu.example.com` — Mission Control with the storm list.
+- Open `https://vaiyu.example.com`: Mission Control with the storm list.
 - `https://vaiyu.example.com/system` should report **3 of 4 models loaded**.
   (Satellite is the fourth, and stays unavailable until it is trained.)
 - Open any storm, open the Prediction Lab, and run a forecast.

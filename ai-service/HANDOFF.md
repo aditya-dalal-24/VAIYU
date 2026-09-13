@@ -1,4 +1,4 @@
-# VAIYU AI Service — Handoff
+# VAIYU AI Service: Handoff
 
 State as of **2026-09-10**, branch `ad_model`. Written for the next device and the
 next AI agent. Every figure below was measured or read from disk in the session
@@ -113,17 +113,17 @@ gitignored and **exist on the development laptop only**.
 | --- | --- | --- |
 | IBTrACS global best track | `data/raw/ibtracs.since1980.csv` (138 MB) | Present locally. Remote name is `ibtracs.since1980.list.v04r01.csv` (see the URL in the README; the shorter name 404s). |
 | **Training table (tracks)** | `data/processed/observations.csv` (~9.5 MB) | Present locally. 111,960 synoptic fixes, 4,450 storms, 1980-01-01 → 2026-09-08. Storms per basin: WP 1387, EP 967, SI 797, NA 711, SP 477, **NI 257** (Bay of Bengal 183, Arabian Sea 102), SA 1. Three filters were relaxed to get here: a central pressure is no longer required on every fix (it had cost 18,472 fixes and 476 storms, worst in the North Indian Ocean, where only two thirds of wind-bearing fixes report one); uncoded `NR` fixes are kept outright, because restricting them to storms coded `TS` somewhere deleted six consecutive North Indian seasons including the April 1991 Bangladesh cyclone, a basin-era where IBTrACS records 1,952 `NR` fixes against 57 `TS`; and the table now carries `sub_basin` (AS/BB) and `sea_surface_temperature_c` (NOAA ERSST v5 monthly means, ~99% coverage). |
-| HURSAT-style label array | `data/raw/Cyclone_Labels h5.npy` (1.8 MB) | Present. Shape `(21076, 8)`, object dtype: `basin, storm_id, lon, lat, YYYYMMDDHH, wind_kt, <column 6: see below>, pressure_hpa`. 485 storms, 3-hourly (off-synoptic rows interpolated). Basins **ATLN 7,144 / EPAC 5,010 / WPAC 8,922 — no North Indian frames**. Column 6 is 0–375, zero whenever wind < 34 kt and interpolated at 3-hourly times, so it is *probably* the 34-kt wind radius (unverified). **The companion image frames are not on this machine**; the name implies an HDF5 image file that was never provided. |
+| HURSAT-style label array | `data/raw/Cyclone_Labels h5.npy` (1.8 MB) | Present. Shape `(21076, 8)`, object dtype: `basin, storm_id, lon, lat, YYYYMMDDHH, wind_kt, <column 6: see below>, pressure_hpa`. 485 storms, 3-hourly (off-synoptic rows interpolated). Basins **ATLN 7,144 / EPAC 5,010 / WPAC 8,922, no North Indian frames**. Column 6 is 0–375, zero whenever wind < 34 kt and interpolated at 3-hourly times, so it is *probably* the 34-kt wind radius (unverified). **The companion image frames are not on this machine**; the name implies an HDF5 image file that was never provided. |
 | NASA IMPACT satellite dataset | Described on branches `Ab4J`/`Aditya` in `ai-service/data/satellite/README.md` | **Images not on this machine.** GOES Clean IR 10.7 µm, CC-BY-4.0, DOI 10.34911/rdnt.xs53up, `ImageFolder` layout `images/{train,validation,test}/{cyclone,non_cyclone}/`, split by storm. |
 | Weather dataset | `data/weather/` on the other branch holds only a `.gitkeep` | **Does not exist.** |
 | `data/processed/cyclone_metadata.csv`, `training_table.csv` | Local | Left over from earlier work; **no current code reads them**. |
 | **MOSDAC sample file** | Intended: `data/raw/mosdac/` | **Not downloaded yet**; the folder does not exist. Spec in §5. |
-| **MOSDAC ordered dataset** | — | **Not ordered.** The order list is generated only after the sample is verified (§10). |
+| **MOSDAC ordered dataset** | None | **Not ordered.** The order list is generated only after the sample is verified (§10). |
 | Trajectory checkpoint | `checkpoints/trajectory.pt` (181 KB) | Feature set 1.1, trained 2026-09-10 10:04 UTC on the clean table. |
 | Intensity checkpoint | `checkpoints/intensity.pt` (217 KB) | Feature set 1.1, trained 2026-09-10 10:09 UTC. |
 | Analogue index | `checkpoints/analogue_index.npz` (6 MB) + `.json` | Built 2026-09-10 from the clean table: 69,984 windows from 3,675 storms. Rebuild with `training/build_analogue_index.py` (~11 min). |
 | Feature set 1.0 checkpoints | `checkpoints/fsv-1.0/` | Backup only. They **cannot load** under 1.1 code (`CHECKPOINT_INVALID`). Safe to delete. |
-| Satellite checkpoint | — | None. |
+| Satellite checkpoint | None | None. |
 
 **North Indian storms covered by INSAT imagery** (counted from our table):
 - INSAT-3DR era (from 2016-09-29): 58 storms, 1,135 synoptic times.
@@ -204,8 +204,8 @@ config file. If so, the **user** runs it.
 | ECMWF open data `*-enfo-tf.bufr` | global forecast tracks | Reachable. These are **forecasts: never use them as observations**; they are usable only as a comparison baseline (needs `eccodes`). Not adopted. |
 | JTWC `metoc.navy.mil` | io, sh, wp | 403 |
 | IMD `rsmcnewdelhi.imd.gov.in` | NI | Unreachable |
-| ISRO Bhuvan | — | Carries no cyclone data (its API offers postal, geocoding, LULC, routing, geoid). |
-| `tropycal` library | — | Rejected. Needs cartopy, pyproj and shapely, takes ~40 s to initialise, and its JTWC path also 403s. |
+| ISRO Bhuvan | None | Carries no cyclone data (its API offers postal, geocoding, LULC, routing, geoid). |
+| `tropycal` library | None | Rejected. Needs cartopy, pyproj and shapely, takes ~40 s to initialise, and its JTWC path also 403s. |
 
 An OpenWeather API key was supplied for an earlier live test. **It is not in the
 repo** (verified), and the service does not use OpenWeather.
@@ -542,17 +542,17 @@ on.
 
 | # | Task | Owner | Depends on |
 | --- | --- | --- | --- |
-| 1 | Push the `ai-service/` commits, excluding the frontend files | User | — |
+| 1 | Push the `ai-service/` commits, excluding the frontend files | User | None |
 | 2 | Download the MOSDAC sample file, and report product names and the SCORPIO format (§5) | User | Active account ✔ |
 | 3 | Write `training/prepare_insat.py`: read L1B/L1C HDF5, calibrate to kelvin, georeference, and cut 224 px storm-centred crops at IBTrACS positions (cyclone examples) plus non-cyclone crops from the same images away from storms. Keep the raw-kelvin `.npy` next to each PNG, because differentiator D measures the array, not the picture. Feed the output to the existing catalog path, with `satellite="INSAT-3DR"` and band `TIR1 10.8 um`. Verify on the one sample file first. | Agent | 2 |
-| 4 | ~~Fix the satellite source-key mismatch~~ **Done.** Remaining: the backend adopts the `imageType` convention (§11) | Backend owner | — |
+| 4 | ~~Fix the satellite source-key mismatch~~ **Done.** Remaining: the backend adopts the `imageType` convention (§11) | Backend owner | None |
 | 5 | Generate the exact MOSDAC order list: NI synoptic times from `observations.csv`, sized to fit the disk (the 2023–2025 storms are the fallback) | Agent | 3 |
 | 6 | Order and download the data into `data/raw/mosdac/`, on D: or the teammate's machine | User | 5 |
 | 7 | Build the catalog, train and evaluate the satellite model (per-storm and per-source accuracy against the majority baseline; compare `test` with `test_source_withheld`) | Teammate / agent | 3, 6 |
 | 8 | Weather inputs: join INSAT SST/UTH (2013+) or ERA5 via `cdsapi` (free account) into `observations.csv`. Bump `FEATURE_SET_VERSION` if feature meaning changes, then retrain trajectory and intensity. | Agent + user (account) | Data access |
 | 9 | Merge the `Ab4J` Spring AI client into the backend branch and run end to end | Backend owner | 1 |
 | 10 | ~~Historical similarity (Analogue Ensemble)~~ **Done.** Remaining: Grad-CAM and the structural signature (differentiator D), which need imagery | Agent | 7 |
-| 11 | ~~Nature codes, reload, Python 3.11~~ **Done.** Remaining: a GPU training run, on a machine that has one | Teammate | — |
+| 11 | ~~Nature codes, reload, Python 3.11~~ **Done.** Remaining: a GPU training run, on a machine that has one | Teammate | None |
 
 ---
 
