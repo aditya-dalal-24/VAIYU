@@ -1,0 +1,27 @@
+# One public origin for the whole app. Caddy obtains and renews the HTTPS
+# certificate for {$VAIYU_DOMAIN} automatically.
+#
+# /api/* goes to Spring Boot and everything else to the console. Serving both
+# from one origin means the browser never makes a cross-origin call, so the
+# CORS list only ever needs this one address.
+{$VAIYU_DOMAIN} {
+	encode gzip
+
+	# The actuator stays on the private network: health checks run inside it.
+	handle /actuator/* {
+		respond 404
+	}
+
+	handle /api/* {
+		reverse_proxy backend:8081
+	}
+
+	handle {
+		reverse_proxy frontend:3000
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+}

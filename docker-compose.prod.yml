@@ -1,0 +1,57 @@
+# Production overrides. Use together with the base file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# What changes from local development:
+# * Caddy terminates HTTPS and is the only thing published to the internet.
+# * Postgres, the backend and the frontend are no longer reachable from the
+#   host's public interfaces.
+# * Every secret must be set in .env beside this file; nothing falls back to a
+#   placeholder password.
+
+services:
+  postgres:
+    ports: !reset []
+    environment:
+      POSTGRES_PASSWORD: ${VAIYU_DB_PASSWORD:?set VAIYU_DB_PASSWORD in .env}
+    restart: unless-stopped
+
+  ai-service:
+    restart: unless-stopped
+
+  backend:
+    ports: !reset []
+    environment:
+      DB_PASSWORD: ${VAIYU_DB_PASSWORD:?set VAIYU_DB_PASSWORD in .env}
+      VAIYU_ADMIN_TOKEN: ${VAIYU_ADMIN_TOKEN:?set VAIYU_ADMIN_TOKEN in .env}
+      VAIYU_CORS_ALLOWED_ORIGINS: https://${VAIYU_DOMAIN:?set VAIYU_DOMAIN in .env}
+    restart: unless-stopped
+
+  frontend:
+    ports: !reset []
+    build:
+      args:
+        # Same origin as the page: Caddy routes /api/* to the backend.
+        VITE_API_BASE_URL: https://${VAIYU_DOMAIN:?set VAIYU_DOMAIN in .env}
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: vaiyu-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      VAIYU_DOMAIN: ${VAIYU_DOMAIN:?set VAIYU_DOMAIN in .env}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:
